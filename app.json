@@ -1,0 +1,11 @@
+{
+  "name": "Cerke Online Backend Rewritten",
+  "description": "A barebones Rust application using the Actix framework",
+  "repository": "",
+  "success_url": "/",
+  "keywords": [],
+  "website": "",
+  "env": {
+    "BUILDPACK_URL": "https://github.com/emk/heroku-buildpack-rust.git"
+  }
+}

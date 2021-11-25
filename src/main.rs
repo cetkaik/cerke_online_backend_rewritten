@@ -1,6 +1,6 @@
 use actix_web::{post, web, App, HttpResponse, HttpServer, Responder};
 use serde::Deserialize;
-use std::sync::Mutex;
+use std::{env, sync::Mutex};
 
 #[derive(Deserialize)]
 struct Info {
@@ -19,6 +19,10 @@ async fn index(data: web::Data<AppStateWithCounter>) -> String {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    let port: u16 = env::var("PORT")
+        .unwrap_or_else(|_| "23564".to_string())
+        .parse()
+        .expect("PORT must be a number");
     let counter = web::Data::new(AppStateWithCounter {
         counter: Mutex::new(0),
     });
@@ -41,7 +45,7 @@ async fn main() -> std::io::Result<()> {
             .service(vs_cpu_entry_staging)
             .service(vs_cpu_entry)
     })
-    .bind("127.0.0.1:8080")?
+    .bind(format!("0.0.0.0:{}", port))?
     .run()
     .await
 }
