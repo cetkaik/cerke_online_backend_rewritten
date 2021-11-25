@@ -8,7 +8,7 @@ struct Info {
 }
 
 struct AppStateWithCounter {
-    counter: Mutex<i32>, // <- Mutex is necessary to mutate safely across threads
+    counter: Mutex<i32>
 }
 
 async fn index(data: web::Data<AppStateWithCounter>) -> String {
