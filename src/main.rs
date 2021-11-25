@@ -1,5 +1,6 @@
 use actix_web::{post, web, App, HttpResponse, HttpServer, Responder};
-use serde::Deserialize;
+use serde::Serializer;
+use serde::{Deserialize, Serialize};
 use std::{env, sync::Mutex};
 
 #[derive(Deserialize)]
@@ -8,7 +9,7 @@ struct Info {
 }
 
 struct AppStateWithCounter {
-    counter: Mutex<i32>
+    counter: Mutex<i32>,
 }
 
 async fn index(data: web::Data<AppStateWithCounter>) -> String {
@@ -122,8 +123,31 @@ async fn vs_cpu_entry_staging(info: web::Json<Info>) -> impl Responder {
     HttpResponse::Ok().body(format!("Welcome {}!", info.username))
 }
 
+fn constant_let_the_game_begin<S>(_: &(), s: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    s.serialize_str("let_the_game_begin")
+}
+
+#[derive(Serialize)]
+struct RetVsCpuEntry {
+    #[serde(serialize_with = "constant_let_the_game_begin")]
+    state: (),
+    access_token: String,
+    is_first_move_my_move: bool,
+
+    #[serde(rename(serialize = "is_IA_down_for_me"))]
+    is_ia_down_for_me: bool,
+}
+
 #[post("/vs_cpu/entry")]
 async fn vs_cpu_entry(info: web::Json<Info>) -> impl Responder {
     println!("Welcome {}!", info.username);
-    HttpResponse::Ok().body(format!("Welcome {}!", info.username))
+    HttpResponse::Ok().json(RetVsCpuEntry {
+        state: (),
+        access_token: "foo".to_owned(),
+        is_first_move_my_move: true,
+        is_ia_down_for_me: true,
+    })
 }
