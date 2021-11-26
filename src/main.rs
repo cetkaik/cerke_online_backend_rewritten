@@ -1,3 +1,5 @@
+mod types;
+
 use actix_web::{post, web, App, HttpResponse, HttpServer, Responder};
 use serde::Serializer;
 use serde::{Deserialize, Serialize};
