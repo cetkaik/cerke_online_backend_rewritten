@@ -1,10 +1,10 @@
 use serde::{Deserialize, Serialize};
 use serde_repr::*;
 
-#[derive(Serialize, Deserialize, Clone, Copy, Debug)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub struct AbsoluteCoord(AbsoluteRow, AbsoluteColumn);
 
-#[derive(Serialize, Deserialize, Clone, Copy, Debug)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(into = "&'static str")]
 #[serde(try_from = "&str")]
 pub enum AbsoluteColumn {
@@ -89,7 +89,7 @@ impl TryFrom<&str> for AbsoluteRow {
     type Error = String;
 }
 
-#[derive(Serialize, Deserialize, Clone, Copy, Debug)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(into = "&'static str")]
 #[serde(try_from = "&str")]
 pub enum AbsoluteRow {
@@ -141,7 +141,7 @@ pub enum NormalMove {
     },
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
 #[serde(tag = "type")]
 
 pub enum NonTamMoveDotData {
@@ -161,7 +161,7 @@ pub enum NonTamMoveDotData {
     },
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
 #[serde(tag = "stepStyle")]
 pub enum TamMoveInternal {
     NoStep {
@@ -217,7 +217,7 @@ enum Message {
     },
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, PartialEq, Eq)]
 struct InfAfterStepInternal {
     src: AbsoluteCoord,
     step: AbsoluteCoord,
@@ -226,93 +226,141 @@ struct InfAfterStepInternal {
     coord_signifying_planned_direction: AbsoluteCoord,
 }
 
-#[derive(Debug, PartialEq, Eq, Deserialize)]
-#[serde(untagged)]
-enum RetInfAfterStep {
+#[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
+struct WhoGoesFirst {
+    result: bool,
+    process: Vec<[Ciurl; 2]>,
+}
+
+#[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(tag = "type")]
+enum RetTyMok {
+    Err,
+    Ok,
+}
+
+#[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(tag = "type")]
+enum RetTaXot {
+    Err,
     Ok {
-        ciurl: Ciurl,
+        is_first_move_my_move: Option<WhoGoesFirst>,
     },
+}
+
+#[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(tag = "type")]
+enum RetInfAfterStep {
+    Ok { ciurl: Ciurl },
+    Err { why_illegal: String },
+}
+
+#[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(tag = "type")]
+enum RetNormalMove {
+    Err { why_illegal: String },
+    WithWaterEntry { ciurl: Ciurl },
+    WithoutWaterEntry,
+}
+
+#[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(tag = "type")]
+enum RetAfterHalfAcceptance {
+    Err { why_illegal: String },
+    WithWaterEntry { ciurl: Ciurl },
+    WithoutWaterEntry,
+}
+
+#[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(tag = "state")]
+enum RetRandomEntry {
+    #[serde(rename = "in_waiting_list")]
+    InWaitingList { access_token: String },
+
+    #[serde(rename = "let_the_game_begin")]
+    LetTheGameBegin {
+        access_token: String,
+        is_first_move_my_move: bool,
+
+        #[serde(rename = "is_IA_down_for_me")]
+        is_ia_down_for_me: bool,
+    },
+}
+
+#[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(tag = "state")]
+enum RetVsCpuEntry {
+    #[serde(rename = "let_the_game_begin")]
+    LetTheGameBegin {
+        access_token: String,
+        is_first_move_my_move: bool,
+
+        #[serde(rename = "is_IA_down_for_me")]
+        is_ia_down_for_me: bool,
+    },
+}
+
+#[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(tag = "type")]
+enum RetRandomPoll {
+    Err { why_illegal: String },
+    Ok { ret: RetRandomEntry },
+}
+
+#[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(tag = "type")]
+enum RetRandomCancel {
+    Err { why_illegal: String },
+    Ok { cancellable: bool },
+}
+
+#[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(tag = "type")]
+enum RetWhetherTyMokPoll {
+    TyMok,
+    TaXot {
+        is_first_move_my_move: Option<WhoGoesFirst>,
+    },
+    NotYetDetermined,
     Err {
-        #[serde(rename = "whyIllegal")]
         why_illegal: String,
     },
 }
 
-use serde::ser::{SerializeStruct, Serializer};
-impl Serialize for RetInfAfterStep {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        match self {
-            RetInfAfterStep::Ok { ciurl } => {
-                let mut state = serializer.serialize_struct("RetInfAfterStep", 2)?;
-                state.serialize_field("legal", &true)?;
-                state.serialize_field("ciurl", &ciurl)?;
-                state.end()
-            }
-            RetInfAfterStep::Err { why_illegal } => {
-                let mut state = serializer.serialize_struct("RetInfAfterStep", 2)?;
-                state.serialize_field("legal", &false)?;
-                state.serialize_field("whyIllegal", &why_illegal)?;
-                state.end()
-            }
-        }
-    }
+#[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(tag = "type")]
+enum RetInfPoll {
+    MoveMade { content: MoveToBePolled },
+    NotYetDetermined,
+    Err { why_illegal: String },
 }
 
-#[test]
-fn test_deserialize_ret_inf_after_step_err() {
-    let deserialized: RetInfAfterStep = serde_json::from_str(
-        r#"{
-        "legal": false,
-        "whyIllegal": "something went wrong"
-    }"#,
-    )
-    .unwrap();
-    assert_eq!(
-        deserialized,
-        RetInfAfterStep::Err {
-            why_illegal: "something went wrong".to_owned()
-        }
-    )
+#[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(tag = "type")]
+enum MoveToBePolled {
+    NonTamMove {
+        data: NonTamMoveDotData,
+    },
+    TamMove {
+        #[serde(flatten)]
+        flatten: TamMoveInternal,
+    },
+    InfAfterStep {
+        src: AbsoluteCoord,
+        step: AbsoluteCoord,
+
+        #[serde(rename = "plannedDirection")]
+        coord_signifying_planned_direction: AbsoluteCoord,
+        stepping_ciurl: Ciurl,
+
+        #[serde(rename = "finalResult")]
+        final_result: Option<FinalResult>,
+    },
 }
 
-#[test]
-fn test_serialize_ret_inf_after_step_err() {
-    let serialized: String = serde_json::to_string(&RetInfAfterStep::Err {
-        why_illegal: "something went wrong".to_owned(),
-    }).unwrap();
-    assert_eq!(
-        serialized,
-        r#"{"legal":false,"whyIllegal":"something went wrong"}"#
-    )
-}
-
-#[test]
-fn test_deserialize_ret_inf_after_step_ok() {
-    let deserialized: RetInfAfterStep = serde_json::from_str(
-        r#"{
-        "legal": true,
-        "ciurl": [false, true, false, false, false]
-    }"#,
-    )
-    .unwrap();
-    assert_eq!(
-        deserialized,
-        RetInfAfterStep::Ok {
-            ciurl: Ciurl(false, true, false, false, false)
-        }
-    )
-}
-
-#[test]
-fn test_serialize_ret_inf_after_step_ok() {
-    let serialized: String = serde_json::to_string(&RetInfAfterStep::Ok {
-        ciurl: Ciurl(false, true, false, false, false)
-    }).unwrap();
-    assert_eq!(
-        serialized,
-        r#"{"legal":true,"ciurl":[false,true,false,false,false]}"#
-    )
+#[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
+struct FinalResult {
+    dest: AbsoluteCoord,
+    water_entry_ciurl: Option<Ciurl>,
+    thwarted_by_failing_water_entry_ciurl: Option<Ciurl>,
 }
