@@ -2,6 +2,47 @@ use serde::{Deserialize, Serialize};
 use serde_repr::*;
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(into = "&'static str")]
+#[serde(try_from = "&str")]
+pub enum TacticsKey {
+    VictoryAlmostCertain,
+    StrengthenedShaman,
+    FreeLunch,
+    AvoidDefeat,
+    LossAlmostCertain,
+    Neutral,
+}
+
+impl TryFrom<&str> for TacticsKey {
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match value {
+            "victory_almost_certain" => Ok(TacticsKey::VictoryAlmostCertain),
+            "strengthened_shaman" => Ok(TacticsKey::StrengthenedShaman),
+            "free_lunch" => Ok(TacticsKey::FreeLunch),
+            "avoid_defeat" => Ok(TacticsKey::AvoidDefeat),
+            "loss_almost_certain" => Ok(TacticsKey::LossAlmostCertain),
+            "neutral" => Ok(TacticsKey::Neutral),
+            s => Err(format!("unknown tactics name `{}` found. Please edit cerke_online_backend_rewritten repository.", s)),
+        }
+    }
+
+    type Error = String;
+}
+
+impl From<TacticsKey> for &'static str {
+    fn from(a: TacticsKey) -> &'static str {
+        match a {
+            TacticsKey::VictoryAlmostCertain => "victory_almost_certain",
+            TacticsKey::StrengthenedShaman => "strengthened_shaman",
+            TacticsKey::FreeLunch => "free_lunch",
+            TacticsKey::AvoidDefeat => "avoid_defeat",
+            TacticsKey::LossAlmostCertain => "loss_almost_certain",
+            TacticsKey::Neutral => "neutral",
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 pub struct AbsoluteCoord(AbsoluteRow, AbsoluteColumn);
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
@@ -153,11 +194,13 @@ pub enum NonTamMoveDotData {
     SrcDst {
         src: AbsoluteCoord,
         dest: AbsoluteCoord,
+        water_entry_ciurl: Option<Ciurl>,
     },
     SrcStepDstFinite {
         src: AbsoluteCoord,
         step: AbsoluteCoord,
         dest: AbsoluteCoord,
+        water_entry_ciurl: Option<Ciurl>,
     },
 }
 
@@ -320,6 +363,19 @@ enum RetWhetherTyMokPoll {
     TyMok,
     TaXot {
         is_first_move_my_move: Option<WhoGoesFirst>,
+    },
+    NotYetDetermined,
+    Err {
+        why_illegal: String,
+    },
+}
+
+#[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(tag = "type")]
+enum RetMainPoll {
+    MoveMade {
+        content: MoveToBePolled,
+        message: Option<TacticsKey>,
     },
     NotYetDetermined,
     Err {
