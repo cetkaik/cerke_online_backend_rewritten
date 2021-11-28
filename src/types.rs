@@ -366,15 +366,13 @@ pub enum RetAfterHalfAcceptance {
 }
 
 #[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
-#[serde(tag = "state")]
+#[serde(tag = "type")]
 pub enum RetRandomEntry {
-    #[serde(rename = "in_waiting_list")]
     InWaitingList { access_token: String },
 
-    #[serde(rename = "let_the_game_begin")]
     LetTheGameBegin {
         access_token: String,
-        is_first_move_my_move: bool,
+        is_first_move_my_move: WhoGoesFirst,
 
         #[serde(rename = "is_IA_down_for_me")]
         is_ia_down_for_me: bool,
@@ -382,12 +380,11 @@ pub enum RetRandomEntry {
 }
 
 #[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
-#[serde(tag = "state")]
+#[serde(tag = "type")]
 pub enum RetVsCpuEntry {
-    #[serde(rename = "let_the_game_begin")]
     LetTheGameBegin {
         access_token: String,
-        is_first_move_my_move: bool,
+        is_first_move_my_move: WhoGoesFirst,
 
         #[serde(rename = "is_IA_down_for_me")]
         is_ia_down_for_me: bool,
