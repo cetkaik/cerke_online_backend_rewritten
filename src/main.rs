@@ -1,5 +1,7 @@
 mod types;
 
+use actix_cors::Cors;
+use actix_web::http::header;
 use actix_web::{post, web, App, HttpResponse, HttpServer, Responder};
 use cetkaik_core::absolute::*;
 use cetkaik_full_state_transition::{Rate, Season};
@@ -107,6 +109,17 @@ async fn main() -> std::io::Result<()> {
 
     HttpServer::new(move || {
         App::new()
+            .wrap(
+                Cors::default()
+                    .allowed_origin("*")
+                    .allowed_methods(vec!["GET", "POST"])
+                    .allowed_headers(vec![
+                        header::ORIGIN,
+                        header::CONTENT_TYPE,
+                        header::ACCEPT,
+                        header::AUTHORIZATION,
+                    ]),
+            )
             .app_data(app_state.clone())
             .route("/", web::get().to(index))
             .service(mainpoll)

@@ -14,3 +14,4 @@ uuid = { version = "0.8.2", features = ["serde", "v4"] }
 rand = "0.8.4"
 cetkaik_full_state_transition = "0.2.11"
 cetkaik_core = "0.3.8"
+actix-cors = "0.5.4"
