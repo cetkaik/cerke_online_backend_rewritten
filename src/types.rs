@@ -1,6 +1,17 @@
 use serde::{Deserialize, Serialize};
 use serde_repr::*;
 
+/// A type that serialize into `{}`.
+#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Debug)]
+pub struct Unit {}
+
+#[test]
+fn unit_serde() {
+    assert_eq!("{}", serde_json::to_string(&Unit {}).unwrap());
+    let g: Unit = serde_json::from_str("{}").unwrap();
+    assert_eq!(Unit {}, g);
+}
+
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[serde(into = "&'static str")]
 #[serde(try_from = "&str")]
@@ -167,8 +178,18 @@ pub enum Profession {
     Io = 9,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy)]
 pub struct Ciurl(bool, bool, bool, bool, bool);
+
+use rand::{prelude::ThreadRng, Rng};
+impl Ciurl {
+    pub fn new(rng: &mut ThreadRng) -> Ciurl {
+        Ciurl(rng.gen(), rng.gen(), rng.gen(), rng.gen(), rng.gen())
+    }
+    pub fn count(self) -> usize {
+        self.0 as usize + self.1 as usize + self.2 as usize + self.3 as usize + self.4 as usize
+    }
+}
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(tag = "type")]
@@ -243,7 +264,7 @@ pub enum TamMoveInternal {
 /* InfAfterStep | AfterHalfAcceptance | NormalMove*/
 #[derive(Serialize, Deserialize)]
 #[serde(tag = "type")]
-enum Message {
+pub enum Message {
     InfAfterStep {
         #[serde(flatten)]
         flatten: InfAfterStepInternal,
@@ -261,7 +282,7 @@ enum Message {
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Eq)]
-struct InfAfterStepInternal {
+pub struct InfAfterStepInternal {
     src: AbsoluteCoord,
     step: AbsoluteCoord,
 
@@ -269,22 +290,52 @@ struct InfAfterStepInternal {
     coord_signifying_planned_direction: AbsoluteCoord,
 }
 
-#[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
-struct WhoGoesFirst {
-    result: bool,
-    process: Vec<[Ciurl; 2]>,
+#[derive(Debug, PartialEq, Eq, Deserialize, Serialize, Clone)]
+pub struct WhoGoesFirst {
+    pub result: bool,
+    pub process: Vec<[Ciurl; 2]>,
+}
+
+impl WhoGoesFirst {
+    pub fn new(mut rng: &mut ThreadRng) -> Self {
+        let mut process: Vec<[Ciurl; 2]> = Vec::new();
+        loop {
+            let ciurl1 = Ciurl::new(&mut rng);
+            let ciurl2 = Ciurl::new(&mut rng);
+            process.push([ciurl1, ciurl2]);
+            if ciurl1.count() > ciurl2.count() {
+                return WhoGoesFirst {
+                    process,
+                    result: true,
+                };
+            }
+            if ciurl1.count() < ciurl2.count() {
+                return WhoGoesFirst {
+                    process,
+                    result: false,
+                };
+            }
+        }
+    }
+
+    pub fn not(&self) -> Self {
+        WhoGoesFirst {
+            process: self.process.iter().map(|[a, b]| [*b, *a]).collect(),
+            result: !self.result,
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(tag = "type")]
-enum RetTyMok {
+pub enum RetTyMok {
     Err,
     Ok,
 }
 
 #[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(tag = "type")]
-enum RetTaXot {
+pub enum RetTaXot {
     Err,
     Ok {
         is_first_move_my_move: Option<WhoGoesFirst>,
@@ -293,14 +344,14 @@ enum RetTaXot {
 
 #[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(tag = "type")]
-enum RetInfAfterStep {
+pub enum RetInfAfterStep {
     Ok { ciurl: Ciurl },
     Err { why_illegal: String },
 }
 
 #[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(tag = "type")]
-enum RetNormalMove {
+pub enum RetNormalMove {
     Err { why_illegal: String },
     WithWaterEntry { ciurl: Ciurl },
     WithoutWaterEntry,
@@ -308,7 +359,7 @@ enum RetNormalMove {
 
 #[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(tag = "type")]
-enum RetAfterHalfAcceptance {
+pub enum RetAfterHalfAcceptance {
     Err { why_illegal: String },
     WithWaterEntry { ciurl: Ciurl },
     WithoutWaterEntry,
@@ -316,7 +367,7 @@ enum RetAfterHalfAcceptance {
 
 #[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(tag = "state")]
-enum RetRandomEntry {
+pub enum RetRandomEntry {
     #[serde(rename = "in_waiting_list")]
     InWaitingList { access_token: String },
 
@@ -332,7 +383,7 @@ enum RetRandomEntry {
 
 #[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(tag = "state")]
-enum RetVsCpuEntry {
+pub enum RetVsCpuEntry {
     #[serde(rename = "let_the_game_begin")]
     LetTheGameBegin {
         access_token: String,
@@ -345,21 +396,21 @@ enum RetVsCpuEntry {
 
 #[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(tag = "type")]
-enum RetRandomPoll {
+pub enum RetRandomPoll {
     Err { why_illegal: String },
     Ok { ret: RetRandomEntry },
 }
 
 #[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(tag = "type")]
-enum RetRandomCancel {
+pub enum RetRandomCancel {
     Err { why_illegal: String },
     Ok { cancellable: bool },
 }
 
 #[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(tag = "type")]
-enum RetWhetherTyMokPoll {
+pub enum RetWhetherTyMokPoll {
     TyMok,
     TaXot {
         is_first_move_my_move: Option<WhoGoesFirst>,
@@ -372,7 +423,7 @@ enum RetWhetherTyMokPoll {
 
 #[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(tag = "type")]
-enum RetMainPoll {
+pub enum RetMainPoll {
     MoveMade {
         content: MoveToBePolled,
         message: Option<TacticsKey>,
@@ -385,7 +436,7 @@ enum RetMainPoll {
 
 #[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(tag = "type")]
-enum RetInfPoll {
+pub enum RetInfPoll {
     MoveMade { content: MoveToBePolled },
     NotYetDetermined,
     Err { why_illegal: String },
@@ -393,7 +444,7 @@ enum RetInfPoll {
 
 #[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(tag = "type")]
-enum MoveToBePolled {
+pub enum MoveToBePolled {
     NonTamMove {
         data: NonTamMoveDotData,
     },
@@ -415,7 +466,7 @@ enum MoveToBePolled {
 }
 
 #[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
-struct FinalResult {
+pub struct FinalResult {
     dest: AbsoluteCoord,
     water_entry_ciurl: Option<Ciurl>,
     thwarted_by_failing_water_entry_ciurl: Option<Ciurl>,
