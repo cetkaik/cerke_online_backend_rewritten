@@ -5,10 +5,13 @@ use actix_web::http::header;
 use actix_web::{post, web, App, HttpResponse, HttpServer, Responder};
 use cetkaik_core::absolute::*;
 use cetkaik_full_state_transition::{Rate, Season};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::{env, sync::Mutex};
-use types::{AbsoluteCoord, MoveToBePolled, RetRandomEntry, RetTaXot, RetTyMok, WhoGoesFirst};
+use types::{
+    AbsoluteCoord, MoveToBePolled, RetRandomCancel, RetRandomEntry, RetTaXot, RetTyMok,
+    WhoGoesFirst,
+};
 
 #[derive(Deserialize)]
 struct Info {
@@ -18,18 +21,30 @@ struct Info {
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 struct AccessToken(Uuid);
 
+impl AccessToken {
+    pub fn parse_str(s: &str) -> Result<Self, uuid::Error> {
+        Ok(Self(Uuid::parse_str(s)?))
+    }
+}
+
 impl std::fmt::Display for AccessToken {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
+        write!(f, "{}", self.0.to_hyphenated().to_string())
     }
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 struct BotToken(Uuid);
 
+impl BotToken {
+    pub fn parse_str(s: &str) -> Result<Self, uuid::Error> {
+        Ok(Self(Uuid::parse_str(s)?))
+    }
+}
+
 impl std::fmt::Display for BotToken {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
+        write!(f, "{}", self.0.to_hyphenated().to_string(),)
     }
 }
 
@@ -293,12 +308,6 @@ async fn random_poll(info: web::Json<Info>) -> impl Responder {
     HttpResponse::Ok().body(format!("Welcome {}!", info.username))
 }
 
-#[post("/random/cancel")]
-async fn random_cancel(info: web::Json<Info>) -> impl Responder {
-    println!("Welcome {}!", info.username);
-    HttpResponse::Ok().body(format!("Welcome {}!", info.username))
-}
-
 #[post("/random/entry/staging")]
 async fn random_entry_staging(data: web::Data<AppState>) -> impl Responder {
     HttpResponse::Ok().json(random_entry_(true, data))
@@ -310,10 +319,57 @@ async fn random_poll_staging(info: web::Json<Info>) -> impl Responder {
     HttpResponse::Ok().body(format!("Welcome {}!", info.username))
 }
 
+#[post("/random/cancel")]
+async fn random_cancel(
+    msg: web::Json<MsgWithAccessToken>,
+    data: web::Data<AppState>,
+) -> impl Responder {
+    HttpResponse::Ok().json(random_entrance_cancel(false, msg, data))
+}
+
 #[post("/random/cancel/staging")]
-async fn random_cancel_staging(info: web::Json<Info>) -> impl Responder {
-    println!("Welcome {}!", info.username);
-    HttpResponse::Ok().body(format!("Welcome {}!", info.username))
+async fn random_cancel_staging(
+    msg: web::Json<MsgWithAccessToken>,
+    data: web::Data<AppState>,
+) -> impl Responder {
+    HttpResponse::Ok().json(random_entrance_cancel(true, msg, data))
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
+
+struct MsgWithAccessToken {
+    access_token: String,
+}
+
+use big_s::S;
+fn random_entrance_cancel(
+    _is_staging: bool,
+    msg: web::Json<MsgWithAccessToken>,
+    data: web::Data<AppState>,
+) -> RetRandomCancel {
+    if let Ok(access_token) = AccessToken::parse_str(&msg.access_token) {
+        let person_to_room = data.person_to_room.lock().unwrap();
+        let mut waiting_list = data.waiting_list.lock().unwrap();
+        match person_to_room.get(&access_token) {
+            // you already have a room. you cannot cancel
+            Some(_) => RetRandomCancel::Ok { cancellable: false },
+            None => {
+                if waiting_list.contains(&access_token) {
+                    // not yet assigned a room, but is in the waiting list
+                    waiting_list.remove(&access_token);
+                    RetRandomCancel::Ok { cancellable: true }
+                } else {
+                    // You told me to cancel, but I don't know you. Hmm...
+                    // well, at least you can cancel
+                    RetRandomCancel::Ok { cancellable: true }
+                }
+            }
+        }
+    } else {
+        RetRandomCancel::Err {
+            why_illegal: S("access token could not be parsed"),
+        }
+    }
 }
 
 #[post("/vs_cpu/entry")]
