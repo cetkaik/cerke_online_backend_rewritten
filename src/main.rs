@@ -1,3 +1,4 @@
+#![warn(clippy::pedantic)]
 mod types;
 
 use actix_cors::Cors;
@@ -193,12 +194,12 @@ async fn slow(info: web::Json<Info>) -> impl Responder {
 
 #[post("/random/entry")]
 async fn random_entry(data: web::Data<AppState>) -> impl Responder {
-    HttpResponse::Ok().json(matching::random_entry_(false, data))
+    HttpResponse::Ok().json(matching::random_entry_(false, &data))
 }
 
 #[post("/random/entry/staging")]
 async fn random_entry_staging(data: web::Data<AppState>) -> impl Responder {
-    HttpResponse::Ok().json(matching::random_entry_(true, data))
+    HttpResponse::Ok().json(matching::random_entry_(true, &data))
 }
 
 #[post("/random/poll")]
@@ -206,7 +207,7 @@ async fn random_poll(
     msg: web::Json<MsgWithAccessToken>,
     data: web::Data<AppState>,
 ) -> impl Responder {
-    HttpResponse::Ok().json(random_entrance_poll_(false, msg, data))
+    HttpResponse::Ok().json(matching::random_entrance_poll_(false, &msg, &data))
 }
 
 #[post("/random/poll/staging")]
@@ -214,7 +215,7 @@ async fn random_poll_staging(
     msg: web::Json<MsgWithAccessToken>,
     data: web::Data<AppState>,
 ) -> impl Responder {
-    HttpResponse::Ok().json(random_entrance_poll_(true, msg, data))
+    HttpResponse::Ok().json(matching::random_entrance_poll_(true, &msg, &data))
 }
 mod matching;
 
@@ -223,7 +224,7 @@ async fn random_cancel(
     msg: web::Json<MsgWithAccessToken>,
     data: web::Data<AppState>,
 ) -> impl Responder {
-    HttpResponse::Ok().json(random_entrance_cancel(false, msg, data))
+    HttpResponse::Ok().json(matching::random_entrance_cancel(false, &msg, &data))
 }
 
 #[post("/random/cancel/staging")]
@@ -231,7 +232,7 @@ async fn random_cancel_staging(
     msg: web::Json<MsgWithAccessToken>,
     data: web::Data<AppState>,
 ) -> impl Responder {
-    HttpResponse::Ok().json(random_entrance_cancel(true, msg, data))
+    HttpResponse::Ok().json(matching::random_entrance_cancel(true, &msg, &data))
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
@@ -240,45 +241,12 @@ pub struct MsgWithAccessToken {
     access_token: String,
 }
 
-use big_s::S;
-
-use crate::matching::random_entrance_poll_;
-fn random_entrance_cancel(
-    _is_staging: bool,
-    msg: web::Json<MsgWithAccessToken>,
-    data: web::Data<AppState>,
-) -> RetRandomCancel {
-    if let Ok(access_token) = AccessToken::parse_str(&msg.access_token) {
-        let person_to_room = data.person_to_room.lock().unwrap();
-        let mut waiting_list = data.waiting_list.lock().unwrap();
-        match person_to_room.get(&access_token) {
-            // you already have a room. you cannot cancel
-            Some(_) => RetRandomCancel::Ok { cancellable: false },
-            None => {
-                if waiting_list.contains(&access_token) {
-                    // not yet assigned a room, but is in the waiting list
-                    waiting_list.remove(&access_token);
-                    RetRandomCancel::Ok { cancellable: true }
-                } else {
-                    // You told me to cancel, but I don't know you. Hmm...
-                    // well, at least you can cancel
-                    RetRandomCancel::Ok { cancellable: true }
-                }
-            }
-        }
-    } else {
-        RetRandomCancel::Err {
-            why_illegal: S("access token could not be parsed"),
-        }
-    }
-}
-
 #[post("/vs_cpu/entry")]
 async fn vs_cpu_entry(data: web::Data<AppState>) -> impl Responder {
-    HttpResponse::Ok().json(matching::vs_cpu_entry_(false, data))
+    HttpResponse::Ok().json(matching::vs_cpu_entry_(false, &data))
 }
 
 #[post("/vs_cpu/entry/staging")]
 async fn vs_cpu_entry_staging(data: web::Data<AppState>) -> impl Responder {
-    HttpResponse::Ok().json(matching::vs_cpu_entry_(true, data))
+    HttpResponse::Ok().json(matching::vs_cpu_entry_(true, &data))
 }

@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use serde_repr::*;
+use serde_repr::{Deserialize_repr, Serialize_repr};
 
 /// A type that serialize into `{}`.
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Debug)]
