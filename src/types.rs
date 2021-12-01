@@ -368,9 +368,12 @@ pub enum RetAfterHalfAcceptance {
 #[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(tag = "type")]
 pub enum RetRandomEntry {
-    InWaitingList { access_token: String },
+    InWaitingList {
+        access_token: String,
+    },
 
-    LetTheGameBegin {
+    #[serde(rename = "LetTheGameBegin")]
+    RoomAlreadyAssigned {
         access_token: String,
         is_first_move_my_move: WhoGoesFirst,
 

@@ -9,10 +9,10 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::{env, sync::Mutex};
 use types::{
-    AbsoluteCoord, MoveToBePolled, RetRandomCancel, RetRandomEntry, RetTaXot, RetTyMok,
-    WhoGoesFirst,
+    AbsoluteCoord, MoveToBePolled, RetRandomCancel, RetRandomEntry, RetRandomPoll, RetTaXot,
+    RetTyMok, RetVsCpuEntry, WhoGoesFirst,
 };
-
+use uuid::Uuid;
 #[derive(Deserialize)]
 struct Info {
     username: String,
@@ -197,9 +197,11 @@ async fn slow(info: web::Json<Info>) -> impl Responder {
 async fn random_entry(data: web::Data<AppState>) -> impl Responder {
     HttpResponse::Ok().json(random_entry_(false, data))
 }
-use uuid::Uuid;
 
-use crate::types::RetVsCpuEntry;
+#[post("/random/entry/staging")]
+async fn random_entry_staging(data: web::Data<AppState>) -> impl Responder {
+    HttpResponse::Ok().json(random_entry_(true, data))
+}
 
 fn open_a_room(_token: AccessToken, _new_token: AccessToken, _is_staging: bool) -> RoomId {
     RoomId(Uuid::new_v4())
@@ -292,7 +294,7 @@ fn random_entry_(is_staging: bool, data: web::Data<AppState>) -> RetRandomEntry 
                 moves_to_be_polled: [vec![], vec![], vec![], vec![]],
             },
         );
-        return RetRandomEntry::LetTheGameBegin {
+        return RetRandomEntry::RoomAlreadyAssigned {
             access_token: format!("{}", new_token),
             is_first_move_my_move: is_first_turn_newtoken_turn[0 /* spring */].clone(),
             is_ia_down_for_me: is_ia_down_for_newtoken,
@@ -303,20 +305,62 @@ fn random_entry_(is_staging: bool, data: web::Data<AppState>) -> RetRandomEntry 
 }
 
 #[post("/random/poll")]
-async fn random_poll(info: web::Json<Info>) -> impl Responder {
-    println!("Welcome {}!", info.username);
-    HttpResponse::Ok().body(format!("Welcome {}!", info.username))
-}
-
-#[post("/random/entry/staging")]
-async fn random_entry_staging(data: web::Data<AppState>) -> impl Responder {
-    HttpResponse::Ok().json(random_entry_(true, data))
+async fn random_poll(
+    msg: web::Json<MsgWithAccessToken>,
+    data: web::Data<AppState>,
+) -> impl Responder {
+    HttpResponse::Ok().json(random_entrance_poll_(false, msg, data))
 }
 
 #[post("/random/poll/staging")]
-async fn random_poll_staging(info: web::Json<Info>) -> impl Responder {
-    println!("Welcome {}!", info.username);
-    HttpResponse::Ok().body(format!("Welcome {}!", info.username))
+async fn random_poll_staging(
+    msg: web::Json<MsgWithAccessToken>,
+    data: web::Data<AppState>,
+) -> impl Responder {
+    HttpResponse::Ok().json(random_entrance_poll_(true, msg, data))
+}
+
+fn random_entrance_poll_(
+    _is_staging: bool,
+    msg: web::Json<MsgWithAccessToken>,
+    data: web::Data<AppState>,
+) -> RetRandomPoll {
+    if let Ok(access_token) = AccessToken::parse_str(&msg.access_token) {
+        let person_to_room = data.person_to_room.lock().unwrap();
+        if let Some(room_id) = (*person_to_room).get(&access_token) {
+            // You already have a room
+            RetRandomPoll::Ok {
+                ret: RetRandomEntry::RoomAlreadyAssigned {
+                    access_token: access_token.to_string(),
+                    is_first_move_my_move: room_id.is_first_move_my_move[0].clone(),
+                    is_ia_down_for_me: room_id.is_IA_down_for_me,
+                },
+            }
+        } else {
+            let waiting_list = data.waiting_list.lock().unwrap();
+            if (*waiting_list).contains(&access_token) {
+                // not yet assigned a room, but is in the waiting list
+                RetRandomPoll::Ok {
+                    ret: RetRandomEntry::InWaitingList {
+                        access_token: access_token.to_string(),
+                    },
+                }
+            } else {
+                RetRandomPoll::Err {
+                    why_illegal: format!(
+                        r#"Invalid access token:
+I don't know {}, which is the access token that you sent me.
+Please reapply by sending an empty object to random/entry ."#,
+                        access_token
+                    ),
+                }
+            }
+        }
+    } else {
+        RetRandomPoll::Err {
+            why_illegal: S("access token could not be parsed"),
+        }
+    }
 }
 
 #[post("/random/cancel")]
