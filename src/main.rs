@@ -65,8 +65,7 @@ pub struct AppState {
     access_counter: Mutex<i32>,
     waiting_list: Mutex<HashSet<AccessToken>>,
     person_to_room: Mutex<HashMap<AccessToken, RoomInfoWithPerspective>>,
-    // bot_to_room: Mutex<HashMap<BotToken, RoomInfoWithPerspective>>,
-    room_to_bot: Mutex<HashMap<RoomId, BotToken>>,
+    rooms_where_opponent_is_bot: Mutex<HashSet<RoomId>>,
     room_to_gamestate: Mutex<HashMap<RoomId, GameState>>,
 }
 
@@ -157,8 +156,7 @@ async fn main() -> std::io::Result<()> {
         access_counter: Mutex::new(0),
         waiting_list: Mutex::new(HashSet::new()),
         person_to_room: Mutex::new(HashMap::new()),
-        // bot_to_room: Mutex::new(HashMap::new()),
-        room_to_bot: Mutex::new(HashMap::new()),
+        rooms_where_opponent_is_bot: Mutex::new(HashSet::new()),
         room_to_gamestate: Mutex::new(HashMap::new()),
     });
 

@@ -172,8 +172,7 @@ pub fn vs_cpu_entry_(is_staging: bool, data: &web::Data<AppState>) -> RetVsCpuEn
     let is_ia_down_for_newtoken: bool = rng.gen();
     let mut person_to_room = data.person_to_room.lock().unwrap();
     let mut room_to_gamestate = data.room_to_gamestate.lock().unwrap();
-    // let mut bot_to_room = data.bot_to_room.lock().unwrap();
-    let mut room_to_bot = data.room_to_bot.lock().unwrap();
+    let mut rooms_where_opponent_is_bot = data.rooms_where_opponent_is_bot.lock().unwrap();
     person_to_room.insert(
         new_token,
         RoomInfoWithPerspective {
@@ -183,20 +182,7 @@ pub fn vs_cpu_entry_(is_staging: bool, data: &web::Data<AppState>) -> RetVsCpuEn
         },
     );
 
-    /*bot_to_room.insert(
-        bot_token,
-        RoomInfoWithPerspective {
-            room_id,
-            is_first_move_my_move: [
-                is_first_turn_newtoken_turn[0].not(),
-                is_first_turn_newtoken_turn[1].not(),
-                is_first_turn_newtoken_turn[2].not(),
-                is_first_turn_newtoken_turn[3].not(),
-            ],
-            is_ia_down_for_me: !is_ia_down_for_newtoken,
-        },
-    );*/
-    room_to_bot.insert(room_id, bot_token);
+    rooms_where_opponent_is_bot.insert(room_id);
     room_to_gamestate.insert(
         room_id,
         GameState {
