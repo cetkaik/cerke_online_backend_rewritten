@@ -14,7 +14,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::{env, sync::Mutex};
 use types::{
-    AbsoluteCoord, MoveToBePolled, RetNormalMove, RetRandomCancel, RetTaXot, RetTyMok, WhoGoesFirst,
+    AbsoluteCoord, MoveToBePolled, RetNormalMove, RetRandomCancel, RetTaXot, RetTyMok,
+    RetWhetherTyMokPoll, WhoGoesFirst,
 };
 use uuid::Uuid;
 
@@ -111,6 +112,21 @@ impl AppState {
     ) -> RetNormalMove {
         todo!()
     }
+
+    pub fn receive_tymok_and_update(&self, room_info: &RoomInfoWithPerspective) -> RetTyMok {
+        todo!()
+    }
+
+    pub fn receive_taxot_and_update(&self, room_info: &RoomInfoWithPerspective) -> RetTaXot {
+        todo!()
+    }
+
+    pub fn reply_to_whether_tymok_poll(
+        &self,
+        room_info: &RoomInfoWithPerspective,
+    ) -> RetWhetherTyMokPoll {
+        todo!()
+    }
 }
 
 struct SrcStep {
@@ -141,11 +157,11 @@ struct MovePiece {
     by_ia_owner: bool,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct RoomInfoWithPerspective {
     room_id: RoomId,
     is_first_move_my_move: [WhoGoesFirst; 4],
-    is_IA_down_for_me: bool,
+    is_ia_down_for_me: bool,
 }
 
 async fn index(data: web::Data<AppState>) -> String {
@@ -218,21 +234,39 @@ async fn infpoll(info: web::Json<Info>) -> impl Responder {
 }
 
 #[post("/whethertymok/tymok")]
-async fn whethertymok_tymok(info: web::Json<Info>) -> impl Responder {
-    println!("Welcome {}!", info.username);
-    HttpResponse::Ok().json(&RetTyMok::Err)
+async fn whethertymok_tymok(data: web::Data<AppState>, auth: BearerAuth) -> impl Responder {
+    HttpResponse::Ok().json(whethertymok_tymok_(auth.token(), &data))
+}
+
+fn whethertymok_tymok_(raw_token: &str, data: &web::Data<AppState>) -> RetTyMok {
+    match parse_token_and_get_room_info(raw_token, data) {
+        Err(why_illegal) => RetTyMok::Err,
+        Ok(room_info) => data.receive_tymok_and_update(&room_info),
+    }
 }
 
 #[post("/whethertymok/taxot")]
-async fn whethertymok_taxot(info: web::Json<Info>) -> impl Responder {
-    println!("Welcome {}!", info.username);
-    HttpResponse::Ok().json(&RetTaXot::Err)
+async fn whethertymok_taxot(data: web::Data<AppState>, auth: BearerAuth) -> impl Responder {
+    HttpResponse::Ok().json(whethertymok_taxot_(auth.token(), &data))
+}
+
+fn whethertymok_taxot_(raw_token: &str, data: &web::Data<AppState>) -> RetTaXot {
+    match parse_token_and_get_room_info(raw_token, data) {
+        Err(why_illegal) => RetTaXot::Err,
+        Ok(room_info) => data.receive_taxot_and_update(&room_info),
+    }
 }
 
 #[post("/whethertymokpoll")]
-async fn whethertymokpoll(info: web::Json<Info>) -> impl Responder {
-    println!("Welcome {}!", info.username);
-    HttpResponse::Ok().body(format!("Welcome {}!", info.username))
+async fn whethertymokpoll(data: web::Data<AppState>, auth: BearerAuth) -> impl Responder {
+    HttpResponse::Ok().json(whethertymokpoll_(auth.token(), &data))
+}
+
+fn whethertymokpoll_(raw_token: &str, data: &web::Data<AppState>) -> RetWhetherTyMokPoll {
+    match parse_token_and_get_room_info(raw_token, data) {
+        Err(why_illegal) => RetWhetherTyMokPoll::Err { why_illegal },
+        Ok(room_info) => data.reply_to_whether_tymok_poll(&room_info),
+    }
 }
 
 #[post("/slow")]
@@ -244,27 +278,33 @@ async fn slow(
     HttpResponse::Ok().json(slow_(auth.token(), &data, &message))
 }
 
+fn parse_token_and_get_room_info(
+    raw_token: &str,
+    data: &web::Data<AppState>,
+) -> Result<RoomInfoWithPerspective, String> {
+    match AccessToken::parse_str(raw_token) {
+        Err(e) => Err(format!(
+            "Unparsable access token `{}`; failed because of {}",
+            raw_token, e
+        )),
+        Ok(access_token) => {
+            let person_to_room = data.person_to_room.lock().unwrap();
+            match person_to_room.get(&access_token) {
+                None => Err(format!("Unrecognized access token `{}`", raw_token)),
+                Some(room_info) => Ok((*room_info).clone()),
+            }
+        }
+    }
+}
+
 fn slow_(
     raw_token: &str,
     data: &web::Data<AppState>,
     message: &web::Json<types::Message>,
 ) -> RetNormalMove {
-    match AccessToken::parse_str(raw_token) {
-        Err(e) => RetNormalMove::Err {
-            why_illegal: format!(
-                "Unparsable access token `{}`; failed because of {}",
-                raw_token, e
-            ),
-        },
-        Ok(access_token) => {
-            let person_to_room = data.person_to_room.lock().unwrap();
-            match person_to_room.get(&access_token) {
-                None => RetNormalMove::Err {
-                    why_illegal: format!("Unrecognized access token `{}`", raw_token),
-                },
-                Some(room_info) => data.analyze_valid_message_and_update(**message, room_info),
-            }
-        }
+    match parse_token_and_get_room_info(raw_token, data) {
+        Err(why_illegal) => RetNormalMove::Err { why_illegal },
+        Ok(room_info) => data.analyze_valid_message_and_update(**message, &room_info),
     }
 }
 

@@ -21,7 +21,7 @@ pub fn random_entrance_poll_(
                 ret: RetRandomEntry::RoomAlreadyAssigned {
                     access_token: access_token.to_string(),
                     is_first_move_my_move: room_id.is_first_move_my_move[0].clone(),
-                    is_ia_down_for_me: room_id.is_IA_down_for_me,
+                    is_ia_down_for_me: room_id.is_ia_down_for_me,
                 },
             }
         } else {
@@ -98,7 +98,7 @@ pub fn random_entry_(is_staging: bool, data: &web::Data<AppState>) -> RetRandomE
             RoomInfoWithPerspective {
                 room_id,
                 is_first_move_my_move: is_first_turn_newtoken_turn.clone(),
-                is_IA_down_for_me: is_ia_down_for_newtoken,
+                is_ia_down_for_me: is_ia_down_for_newtoken,
             },
         );
         person_to_room.insert(
@@ -111,7 +111,7 @@ pub fn random_entry_(is_staging: bool, data: &web::Data<AppState>) -> RetRandomE
                     is_first_turn_newtoken_turn[2].not(),
                     is_first_turn_newtoken_turn[3].not(),
                 ],
-                is_IA_down_for_me: !is_ia_down_for_newtoken,
+                is_ia_down_for_me: !is_ia_down_for_newtoken,
             },
         );
 
@@ -179,7 +179,7 @@ pub fn vs_cpu_entry_(is_staging: bool, data: &web::Data<AppState>) -> RetVsCpuEn
         RoomInfoWithPerspective {
             room_id,
             is_first_move_my_move: is_first_turn_newtoken_turn.clone(),
-            is_IA_down_for_me: is_ia_down_for_newtoken,
+            is_ia_down_for_me: is_ia_down_for_newtoken,
         },
     );
 
@@ -193,7 +193,7 @@ pub fn vs_cpu_entry_(is_staging: bool, data: &web::Data<AppState>) -> RetVsCpuEn
                 is_first_turn_newtoken_turn[2].not(),
                 is_first_turn_newtoken_turn[3].not(),
             ],
-            is_IA_down_for_me: !is_ia_down_for_newtoken,
+            is_ia_down_for_me: !is_ia_down_for_newtoken,
         },
     );
     room_to_bot.insert(room_id, bot_token);
