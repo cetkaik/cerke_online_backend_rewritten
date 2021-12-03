@@ -8,14 +8,14 @@ use actix_web::{dev::ServiceRequest, post, web, App, Error, HttpResponse, HttpSe
 use actix_web_httpauth::extractors::bearer::{BearerAuth, Config};
 use actix_web_httpauth::extractors::AuthenticationError;
 use actix_web_httpauth::middleware::HttpAuthentication;
-use cetkaik_core::absolute::*;
+use cetkaik_core::absolute::Field;
 use cetkaik_full_state_transition::{Rate, Season};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::{env, sync::Mutex};
 use types::{
-    AbsoluteCoord, MoveToBePolled, RetNormalMove, RetRandomCancel, RetTaXot, RetTyMok,
-    RetWhetherTyMokPoll, WhoGoesFirst,
+    AbsoluteCoord, MainMessage, MoveToBePolled, RetInfPoll, RetMainPoll, RetNormalMove, RetTaXot,
+    RetTyMok, RetWhetherTyMokPoll, WhoGoesFirst,
 };
 use uuid::Uuid;
 
@@ -44,11 +44,6 @@ async fn bearer_auth_validator(
         }
         Err(_) => Err(AuthenticationError::from(config).into()),
     }
-}
-#[deprecated]
-#[derive(Deserialize)]
-struct Info {
-    username: String,
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
@@ -107,7 +102,7 @@ pub struct AppState {
 impl AppState {
     pub fn analyze_valid_message_and_update(
         &self,
-        message: types::Message,
+        message: MainMessage,
         room_info: &RoomInfoWithPerspective,
     ) -> RetNormalMove {
         todo!()
@@ -125,6 +120,14 @@ impl AppState {
         &self,
         room_info: &RoomInfoWithPerspective,
     ) -> RetWhetherTyMokPoll {
+        todo!()
+    }
+
+    pub fn reply_to_main_poll(&self, room_info: &RoomInfoWithPerspective) -> RetMainPoll {
+        todo!()
+    }
+
+    pub fn reply_to_inf_poll(&self, room_info: &RoomInfoWithPerspective) -> RetInfPoll {
         todo!()
     }
 }
@@ -222,15 +225,27 @@ async fn main() -> std::io::Result<()> {
 }
 
 #[post("/mainpoll")]
-async fn mainpoll(info: web::Json<Info>) -> impl Responder {
-    println!("Welcome {}!", info.username);
-    HttpResponse::Ok().body(format!("Welcome {}!", info.username))
+async fn mainpoll(data: web::Data<AppState>, auth: BearerAuth) -> impl Responder {
+    HttpResponse::Ok().json(main_poll_(auth.token(), &data))
+}
+
+fn main_poll_(raw_token: &str, data: &web::Data<AppState>) -> RetMainPoll {
+    match parse_token_and_get_room_info(raw_token, data) {
+        Err(why_illegal) => RetMainPoll::Err { why_illegal },
+        Ok(room_info) => data.reply_to_main_poll(&room_info),
+    }
 }
 
 #[post("/infpoll")]
-async fn infpoll(info: web::Json<Info>) -> impl Responder {
-    println!("Welcome {}!", info.username);
-    HttpResponse::Ok().body(format!("Welcome {}!", info.username))
+async fn infpoll(data: web::Data<AppState>, auth: BearerAuth) -> impl Responder {
+    HttpResponse::Ok().json(inf_poll_(auth.token(), &data))
+}
+
+fn inf_poll_(raw_token: &str, data: &web::Data<AppState>) -> RetInfPoll {
+    match parse_token_and_get_room_info(raw_token, data) {
+        Err(why_illegal) => RetInfPoll::Err { why_illegal },
+        Ok(room_info) => data.reply_to_inf_poll(&room_info),
+    }
 }
 
 #[post("/whethertymok/tymok")]
@@ -272,7 +287,7 @@ fn whethertymokpoll_(raw_token: &str, data: &web::Data<AppState>) -> RetWhetherT
 #[post("/slow")]
 async fn slow(
     data: web::Data<AppState>,
-    message: web::Json<types::Message>,
+    message: web::Json<MainMessage>,
     auth: BearerAuth,
 ) -> impl Responder {
     HttpResponse::Ok().json(slow_(auth.token(), &data, &message))
@@ -300,7 +315,7 @@ fn parse_token_and_get_room_info(
 fn slow_(
     raw_token: &str,
     data: &web::Data<AppState>,
-    message: &web::Json<types::Message>,
+    message: &web::Json<MainMessage>,
 ) -> RetNormalMove {
     match parse_token_and_get_room_info(raw_token, data) {
         Err(why_illegal) => RetNormalMove::Err { why_illegal },

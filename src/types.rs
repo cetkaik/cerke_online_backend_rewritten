@@ -266,7 +266,7 @@ pub enum TamMoveInternal {
 /* InfAfterStep | AfterHalfAcceptance | NormalMove*/
 #[derive(Serialize, Deserialize, Debug, Copy, Clone, Eq, PartialEq)]
 #[serde(tag = "type")]
-pub enum Message {
+pub enum MainMessage {
     InfAfterStep {
         #[serde(flatten)]
         flatten: InfAfterStepInternal,
