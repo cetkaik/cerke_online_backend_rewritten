@@ -1,4 +1,5 @@
 #![warn(clippy::pedantic)]
+#![allow(clippy::unused_async)]
 mod types;
 
 use actix_cors::Cors;
@@ -12,30 +13,29 @@ use cetkaik_full_state_transition::{Rate, Season};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::{env, sync::Mutex};
-use types::{AbsoluteCoord, MoveToBePolled, RetRandomCancel, RetTaXot, RetTyMok, WhoGoesFirst};
+use types::{
+    AbsoluteCoord, MoveToBePolled, RetNormalMove, RetRandomCancel, RetTaXot, RetTyMok, WhoGoesFirst,
+};
 use uuid::Uuid;
 
 fn validate_token(str: &str) -> Result<bool, std::io::Error> {
     if (str.eq("a-secure-token")) {
         return Ok(true);
     }
-    return Err(std::io::Error::new(
+    Err(std::io::Error::new(
         std::io::ErrorKind::Other,
         "Authentication failed!",
-    ));
+    ))
 }
 
 async fn bearer_auth_validator(
     req: ServiceRequest,
     credentials: BearerAuth,
 ) -> Result<ServiceRequest, Error> {
-    let config = req
-        .app_data::<Config>()
-        .map(|data| data.clone())
-        .unwrap_or_else(Default::default);
+    let config = req.app_data::<Config>().cloned().unwrap_or_default();
     match validate_token(credentials.token()) {
         Ok(result) => {
-            if result == true {
+            if result {
                 Ok(req)
             } else {
                 Err(AuthenticationError::from(config).into())
@@ -103,6 +103,16 @@ pub struct AppState {
     room_to_gamestate: Mutex<HashMap<RoomId, GameState>>,
 }
 
+impl AppState {
+    pub fn analyze_valid_message_and_update(
+        &self,
+        message: types::Message,
+        room_info: &RoomInfoWithPerspective,
+    ) -> RetNormalMove {
+        todo!()
+    }
+}
+
 struct SrcStep {
     src: AbsoluteCoord,
     step: AbsoluteCoord,
@@ -131,7 +141,8 @@ struct MovePiece {
     by_ia_owner: bool,
 }
 
-struct RoomInfoWithPerspective {
+#[derive(Debug)]
+pub struct RoomInfoWithPerspective {
     room_id: RoomId,
     is_first_move_my_move: [WhoGoesFirst; 4],
     is_IA_down_for_me: bool,
@@ -225,9 +236,36 @@ async fn whethertymokpoll(info: web::Json<Info>) -> impl Responder {
 }
 
 #[post("/slow")]
-async fn slow(info: web::Json<Info>) -> impl Responder {
-    println!("Welcome {}!", info.username);
-    HttpResponse::Ok().body(format!("Welcome {}!", info.username))
+async fn slow(
+    data: web::Data<AppState>,
+    message: web::Json<types::Message>,
+    auth: BearerAuth,
+) -> impl Responder {
+    HttpResponse::Ok().json(slow_(auth.token(), &data, &message))
+}
+
+fn slow_(
+    raw_token: &str,
+    data: &web::Data<AppState>,
+    message: &web::Json<types::Message>,
+) -> RetNormalMove {
+    match AccessToken::parse_str(raw_token) {
+        Err(e) => RetNormalMove::Err {
+            why_illegal: format!(
+                "Unparsable access token `{}`; failed because of {}",
+                raw_token, e
+            ),
+        },
+        Ok(access_token) => {
+            let person_to_room = data.person_to_room.lock().unwrap();
+            match person_to_room.get(&access_token) {
+                None => RetNormalMove::Err {
+                    why_illegal: format!("Unrecognized access token `{}`", raw_token),
+                },
+                Some(room_info) => data.analyze_valid_message_and_update(**message, room_info),
+            }
+        }
+    }
 }
 
 #[post("/random/entry")]

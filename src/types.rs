@@ -156,14 +156,14 @@ pub enum AbsoluteRow {
     IA,
 }
 
-#[derive(Serialize_repr, Deserialize_repr, PartialEq, Eq, Debug)]
+#[derive(Serialize_repr, Deserialize_repr, PartialEq, Eq, Debug, Copy, Clone)]
 #[repr(u8)]
 pub enum Color {
     Kok1 = 0,
     Huok2 = 1,
 }
 
-#[derive(Serialize_repr, Deserialize_repr, PartialEq, Eq, Debug)]
+#[derive(Serialize_repr, Deserialize_repr, PartialEq, Eq, Debug, Copy, Clone)]
 #[repr(u8)]
 pub enum Profession {
     Nuak1 = 0,
@@ -179,7 +179,6 @@ pub enum Profession {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy)]
-
 // Using boolean is natural, and this is also necessary to allow easy interop with the frontend
 #[allow(clippy::struct_excessive_bools)]
 pub struct Ciurl(bool, bool, bool, bool, bool);
@@ -206,7 +205,7 @@ pub enum NormalMove {
     },
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Copy, Clone)]
 #[serde(tag = "type")]
 
 pub enum NonTamMoveDotData {
@@ -228,7 +227,7 @@ pub enum NonTamMoveDotData {
     },
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Copy, Clone)]
 #[serde(tag = "stepStyle")]
 pub enum TamMoveInternal {
     NoStep {
@@ -265,7 +264,7 @@ pub enum TamMoveInternal {
 }
 
 /* InfAfterStep | AfterHalfAcceptance | NormalMove*/
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, Copy, Clone, Eq, PartialEq)]
 #[serde(tag = "type")]
 pub enum Message {
     InfAfterStep {
@@ -284,7 +283,7 @@ pub enum Message {
     },
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Copy, Clone)]
 pub struct InfAfterStepInternal {
     src: AbsoluteCoord,
     step: AbsoluteCoord,
