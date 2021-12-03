@@ -179,6 +179,9 @@ pub enum Profession {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy)]
+
+// Using boolean is natural, and this is also necessary to allow easy interop with the frontend
+#[allow(clippy::struct_excessive_bools)]
 pub struct Ciurl(bool, bool, bool, bool, bool);
 
 use rand::{prelude::ThreadRng, Rng};
@@ -297,11 +300,11 @@ pub struct WhoGoesFirst {
 }
 
 impl WhoGoesFirst {
-    pub fn new(mut rng: &mut ThreadRng) -> Self {
+    pub fn new(rng: &mut ThreadRng) -> Self {
         let mut process: Vec<[Ciurl; 2]> = Vec::new();
         loop {
-            let ciurl1 = Ciurl::new(&mut rng);
-            let ciurl2 = Ciurl::new(&mut rng);
+            let ciurl1 = Ciurl::new(rng);
+            let ciurl2 = Ciurl::new(rng);
             process.push([ciurl1, ciurl2]);
             if ciurl1.count() > ciurl2.count() {
                 return WhoGoesFirst {

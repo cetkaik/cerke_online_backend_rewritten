@@ -3,7 +3,10 @@ mod types;
 
 use actix_cors::Cors;
 use actix_web::http::header;
-use actix_web::{post, web, App, HttpResponse, HttpServer, Responder};
+use actix_web::{dev::ServiceRequest, post, web, App, Error, HttpResponse, HttpServer, Responder};
+use actix_web_httpauth::extractors::bearer::{BearerAuth, Config};
+use actix_web_httpauth::extractors::AuthenticationError;
+use actix_web_httpauth::middleware::HttpAuthentication;
 use cetkaik_core::absolute::*;
 use cetkaik_full_state_transition::{Rate, Season};
 use serde::{Deserialize, Serialize};
@@ -11,6 +14,36 @@ use std::collections::{HashMap, HashSet};
 use std::{env, sync::Mutex};
 use types::{AbsoluteCoord, MoveToBePolled, RetRandomCancel, RetTaXot, RetTyMok, WhoGoesFirst};
 use uuid::Uuid;
+
+fn validate_token(str: &str) -> Result<bool, std::io::Error> {
+    if (str.eq("a-secure-token")) {
+        return Ok(true);
+    }
+    return Err(std::io::Error::new(
+        std::io::ErrorKind::Other,
+        "Authentication failed!",
+    ));
+}
+
+async fn bearer_auth_validator(
+    req: ServiceRequest,
+    credentials: BearerAuth,
+) -> Result<ServiceRequest, Error> {
+    let config = req
+        .app_data::<Config>()
+        .map(|data| data.clone())
+        .unwrap_or_else(Default::default);
+    match validate_token(credentials.token()) {
+        Ok(result) => {
+            if result == true {
+                Ok(req)
+            } else {
+                Err(AuthenticationError::from(config).into())
+            }
+        }
+        Err(_) => Err(AuthenticationError::from(config).into()),
+    }
+}
 #[deprecated]
 #[derive(Deserialize)]
 struct Info {
@@ -21,6 +54,8 @@ struct Info {
 pub struct AccessToken(Uuid);
 
 impl AccessToken {
+    /// # Errors
+    /// Returns `Err` if the Uuid is not valid
     pub fn parse_str(s: &str) -> Result<Self, uuid::Error> {
         Ok(Self(Uuid::parse_str(s)?))
     }
@@ -36,6 +71,8 @@ impl std::fmt::Display for AccessToken {
 pub struct BotToken(Uuid);
 
 impl BotToken {
+    /// # Errors
+    /// Returns `Err` if the Uuid is not valid
     pub fn parse_str(s: &str) -> Result<Self, uuid::Error> {
         Ok(Self(Uuid::parse_str(s)?))
     }
@@ -122,6 +159,7 @@ async fn main() -> std::io::Result<()> {
     });
 
     HttpServer::new(move || {
+        let auth = HttpAuthentication::bearer(bearer_auth_validator);
         App::new()
             .wrap(
                 Cors::default()
