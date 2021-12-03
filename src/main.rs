@@ -4,10 +4,8 @@ mod types;
 
 use actix_cors::Cors;
 use actix_web::http::header;
-use actix_web::{dev::ServiceRequest, post, web, App, Error, HttpResponse, HttpServer, Responder};
-use actix_web_httpauth::extractors::bearer::{BearerAuth, Config};
-use actix_web_httpauth::extractors::AuthenticationError;
-use actix_web_httpauth::middleware::HttpAuthentication;
+use actix_web::{post, web, App, HttpResponse, HttpServer, Responder};
+use actix_web_httpauth::extractors::bearer::BearerAuth;
 use cetkaik_core::absolute::Field;
 use cetkaik_full_state_transition::{Rate, Season};
 use serde::{Deserialize, Serialize};
@@ -18,33 +16,6 @@ use types::{
     RetTyMok, RetWhetherTyMokPoll, WhoGoesFirst,
 };
 use uuid::Uuid;
-
-fn validate_token(str: &str) -> Result<bool, std::io::Error> {
-    if (str.eq("a-secure-token")) {
-        return Ok(true);
-    }
-    Err(std::io::Error::new(
-        std::io::ErrorKind::Other,
-        "Authentication failed!",
-    ))
-}
-
-async fn bearer_auth_validator(
-    req: ServiceRequest,
-    credentials: BearerAuth,
-) -> Result<ServiceRequest, Error> {
-    let config = req.app_data::<Config>().cloned().unwrap_or_default();
-    match validate_token(credentials.token()) {
-        Ok(result) => {
-            if result {
-                Ok(req)
-            } else {
-                Err(AuthenticationError::from(config).into())
-            }
-        }
-        Err(_) => Err(AuthenticationError::from(config).into()),
-    }
-}
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub struct AccessToken(Uuid);
@@ -94,7 +65,7 @@ pub struct AppState {
     access_counter: Mutex<i32>,
     waiting_list: Mutex<HashSet<AccessToken>>,
     person_to_room: Mutex<HashMap<AccessToken, RoomInfoWithPerspective>>,
-    bot_to_room: Mutex<HashMap<BotToken, RoomInfoWithPerspective>>,
+    // bot_to_room: Mutex<HashMap<BotToken, RoomInfoWithPerspective>>,
     room_to_bot: Mutex<HashMap<RoomId, BotToken>>,
     room_to_gamestate: Mutex<HashMap<RoomId, GameState>>,
 }
@@ -124,6 +95,9 @@ impl AppState {
     }
 
     pub fn reply_to_main_poll(&self, room_info: &RoomInfoWithPerspective) -> RetMainPoll {
+        let mut room_to_gamestate = self.room_to_gamestate.lock().unwrap();
+        let mut game_state: Option<&mut GameState> = room_to_gamestate.get_mut(&room_info.room_id);
+
         todo!()
     }
 
@@ -183,13 +157,12 @@ async fn main() -> std::io::Result<()> {
         access_counter: Mutex::new(0),
         waiting_list: Mutex::new(HashSet::new()),
         person_to_room: Mutex::new(HashMap::new()),
-        bot_to_room: Mutex::new(HashMap::new()),
+        // bot_to_room: Mutex::new(HashMap::new()),
         room_to_bot: Mutex::new(HashMap::new()),
         room_to_gamestate: Mutex::new(HashMap::new()),
     });
 
     HttpServer::new(move || {
-        let auth = HttpAuthentication::bearer(bearer_auth_validator);
         App::new()
             .wrap(
                 Cors::default()
