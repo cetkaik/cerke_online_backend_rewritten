@@ -12,12 +12,11 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::{env, sync::Mutex};
 use types::{
-    AbsoluteCoord, MainMessage, MoveToBePolled, RetInfPoll, RetMainPoll, RetNormalMove, RetTaXot,
-    RetTyMok, RetWhetherTyMokPoll, WhoGoesFirst,
+    AbsoluteCoord, AfterHalfAcceptanceMessage, MainMessage, MoveToBePolled, RetAfterHalfAcceptance,
+    RetInfPoll, RetMainPoll, RetNormalMove, RetTaXot, RetTyMok, RetWhetherTyMokPoll,
+    TamMoveInternal, WhoGoesFirst,
 };
 use uuid::Uuid;
-
-use crate::types::TamMoveInternal;
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub struct AccessToken(Uuid);
@@ -72,6 +71,13 @@ pub struct AppState {
 }
 
 impl AppState {
+    pub fn analyze_afterhalfacceptance_message_and_update(
+        &self,
+        message: AfterHalfAcceptanceMessage,
+        room_info: &RoomInfoWithPerspective,
+    ) -> RetAfterHalfAcceptance {
+        todo!()
+    }
     pub fn analyze_main_message_and_update(
         &self,
         message: MainMessage,
@@ -262,7 +268,7 @@ async fn main() -> std::io::Result<()> {
             .service(whethertymok_tymok)
             .service(whethertymok_taxot)
             .service(whethertymokpoll)
-            .service(slow)
+            .service(decision_main)
             .service(random_entry)
             .service(random_poll)
             .service(random_cancel)
@@ -277,7 +283,7 @@ async fn main() -> std::io::Result<()> {
     .await
 }
 
-#[post("/mainpoll")]
+#[post("/poll/main")]
 async fn mainpoll(data: web::Data<AppState>, auth: BearerAuth) -> impl Responder {
     HttpResponse::Ok().json(main_poll_(auth.token(), &data))
 }
@@ -289,7 +295,7 @@ fn main_poll_(raw_token: &str, data: &web::Data<AppState>) -> RetMainPoll {
     }
 }
 
-#[post("/infpoll")]
+#[post("/poll/inf")]
 async fn infpoll(data: web::Data<AppState>, auth: BearerAuth) -> impl Responder {
     HttpResponse::Ok().json(inf_poll_(auth.token(), &data))
 }
@@ -301,7 +307,7 @@ fn inf_poll_(raw_token: &str, data: &web::Data<AppState>) -> RetInfPoll {
     }
 }
 
-#[post("/whethertymok/tymok")]
+#[post("/decision/tymok")]
 async fn whethertymok_tymok(data: web::Data<AppState>, auth: BearerAuth) -> impl Responder {
     HttpResponse::Ok().json(whethertymok_tymok_(auth.token(), &data))
 }
@@ -313,7 +319,7 @@ fn whethertymok_tymok_(raw_token: &str, data: &web::Data<AppState>) -> RetTyMok 
     }
 }
 
-#[post("/whethertymok/taxot")]
+#[post("/decision/taxot")]
 async fn whethertymok_taxot(data: web::Data<AppState>, auth: BearerAuth) -> impl Responder {
     HttpResponse::Ok().json(whethertymok_taxot_(auth.token(), &data))
 }
@@ -325,7 +331,7 @@ fn whethertymok_taxot_(raw_token: &str, data: &web::Data<AppState>) -> RetTaXot 
     }
 }
 
-#[post("/whethertymokpoll")]
+#[post("/poll/whethertymok")]
 async fn whethertymokpoll(data: web::Data<AppState>, auth: BearerAuth) -> impl Responder {
     HttpResponse::Ok().json(whethertymokpoll_(auth.token(), &data))
 }
@@ -337,13 +343,22 @@ fn whethertymokpoll_(raw_token: &str, data: &web::Data<AppState>) -> RetWhetherT
     }
 }
 
-#[post("/slow")]
-async fn slow(
+#[post("/decision/main")]
+async fn decision_main(
     data: web::Data<AppState>,
     message: web::Json<MainMessage>,
     auth: BearerAuth,
 ) -> impl Responder {
     HttpResponse::Ok().json(slow_(auth.token(), &data, &message))
+}
+
+#[post("/decision/afterhalfacceptance")]
+async fn slow2(
+    data: web::Data<AppState>,
+    message: web::Json<AfterHalfAcceptanceMessage>,
+    auth: BearerAuth,
+) -> impl Responder {
+    HttpResponse::Ok().json(slow2_(auth.token(), &data, &message))
 }
 
 fn parse_token_and_get_room_info(
@@ -376,17 +391,28 @@ fn slow_(
     }
 }
 
-#[post("/random/entry")]
+fn slow2_(
+    raw_token: &str,
+    data: &web::Data<AppState>,
+    message: &web::Json<AfterHalfAcceptanceMessage>,
+) -> RetAfterHalfAcceptance {
+    match parse_token_and_get_room_info(raw_token, data) {
+        Err(why_illegal) => RetAfterHalfAcceptance::Err { why_illegal },
+        Ok(room_info) => data.analyze_afterhalfacceptance_message_and_update(**message, &room_info),
+    }
+}
+
+#[post("/matching/random/entry")]
 async fn random_entry(data: web::Data<AppState>) -> impl Responder {
     HttpResponse::Ok().json(matching::random_entry_(false, &data))
 }
 
-#[post("/random/entry/staging")]
+#[post("/matching/random/entry/staging")]
 async fn random_entry_staging(data: web::Data<AppState>) -> impl Responder {
     HttpResponse::Ok().json(matching::random_entry_(true, &data))
 }
 
-#[post("/random/poll")]
+#[post("/matching/random/poll")]
 async fn random_poll(
     msg: web::Json<MsgWithAccessToken>,
     data: web::Data<AppState>,
@@ -394,7 +420,7 @@ async fn random_poll(
     HttpResponse::Ok().json(matching::random_entrance_poll_(false, &msg, &data))
 }
 
-#[post("/random/poll/staging")]
+#[post("/matching/random/poll/staging")]
 async fn random_poll_staging(
     msg: web::Json<MsgWithAccessToken>,
     data: web::Data<AppState>,
@@ -403,7 +429,7 @@ async fn random_poll_staging(
 }
 mod matching;
 
-#[post("/random/cancel")]
+#[post("/matching/random/cancel")]
 async fn random_cancel(
     msg: web::Json<MsgWithAccessToken>,
     data: web::Data<AppState>,
@@ -411,7 +437,7 @@ async fn random_cancel(
     HttpResponse::Ok().json(matching::random_entrance_cancel(false, &msg, &data))
 }
 
-#[post("/random/cancel/staging")]
+#[post("/matching/random/cancel/staging")]
 async fn random_cancel_staging(
     msg: web::Json<MsgWithAccessToken>,
     data: web::Data<AppState>,
@@ -425,12 +451,12 @@ pub struct MsgWithAccessToken {
     access_token: String,
 }
 
-#[post("/vs_cpu/entry")]
+#[post("/matching/vs_cpu/entry")]
 async fn vs_cpu_entry(data: web::Data<AppState>) -> impl Responder {
     HttpResponse::Ok().json(matching::vs_cpu_entry_(false, &data))
 }
 
-#[post("/vs_cpu/entry/staging")]
+#[post("/matching/vs_cpu/entry/staging")]
 async fn vs_cpu_entry_staging(data: web::Data<AppState>) -> impl Responder {
     HttpResponse::Ok().json(matching::vs_cpu_entry_(true, &data))
 }

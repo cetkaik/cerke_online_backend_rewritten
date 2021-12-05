@@ -170,9 +170,6 @@ pub enum MainMessage {
         #[serde(flatten)]
         flatten: InfAfterStepInternal,
     },
-    AfterHalfAcceptance {
-        dest: Option<AbsoluteCoord>,
-    },
     NonTamMove {
         data: NonTamMoveDotData,
     },
@@ -180,6 +177,12 @@ pub enum MainMessage {
         #[serde(flatten)]
         flatten: TamMoveInternal,
     },
+}
+
+#[derive(Serialize, Deserialize, Debug, Copy, Clone, Eq, PartialEq)]
+#[serde(tag = "type")]
+pub enum AfterHalfAcceptanceMessage {
+    AfterHalfAcceptance { dest: Option<AbsoluteCoord> },
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Copy, Clone)]
