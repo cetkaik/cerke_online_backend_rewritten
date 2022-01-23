@@ -65,6 +65,9 @@ async fn main() -> std::io::Result<()> {
             .service(whethertymok_taxot)
             .service(whethertymokpoll)
             .service(decision_main)
+            .service(decision_normalmove)
+            .service(decision_infafterstep)
+            .service(decision_afterhalfacceptance)
             .service(random_entry)
             .service(random_poll)
             .service(random_cancel)
@@ -157,6 +160,7 @@ async fn slow2(
     HttpResponse::Ok().json(slow2_(auth.token(), &data, &message))
 }
 
+
 fn parse_token_and_get_room_info(
     raw_token: &str,
     data: &web::Data<AppState>,
@@ -195,6 +199,66 @@ fn slow2_(
     match parse_token_and_get_room_info(raw_token, data) {
         Err(why_illegal) => RetAfterHalfAcceptance::Err { why_illegal },
         Ok(room_info) => data.analyze_afterhalfacceptance_message_and_update(**message, &room_info),
+    }
+}
+
+#[post("/decision/infafterstep")]
+async fn decision_infafterstep(
+    data: web::Data<AppState>,
+    message: web::Json<MainMessage>,
+    auth: BearerAuth,
+) -> impl Responder {
+    HttpResponse::Ok().json(decision_infafterstep_(auth.token(), &data, &message))
+}
+
+fn decision_infafterstep_(
+    raw_token: &str,
+    data: &web::Data<AppState>,
+    message: &web::Json<MainMessage>,
+) -> RetNormalMove {
+    match parse_token_and_get_room_info(raw_token, data) {
+        Err(why_illegal) => RetNormalMove::Err { why_illegal },
+        Ok(room_info) => data.analyze_main_message_and_update(**message, &room_info),
+    }
+}
+
+#[post("/decision/normalmove")]
+async fn decision_normalmove(
+    data: web::Data<AppState>,
+    message: web::Json<MainMessage>,
+    auth: BearerAuth,
+) -> impl Responder {
+    HttpResponse::Ok().json(decision_normalmove_(auth.token(), &data, &message))
+}
+
+fn decision_normalmove_(
+    raw_token: &str,
+    data: &web::Data<AppState>,
+    message: &web::Json<MainMessage>,
+) -> RetNormalMove {
+    match parse_token_and_get_room_info(raw_token, data) {
+        Err(why_illegal) => RetNormalMove::Err { why_illegal },
+        Ok(room_info) => data.analyze_main_message_and_update(**message, &room_info),
+    }
+}
+
+#[post("/decision/afterhalfacceptance")]
+async fn decision_afterhalfacceptance(
+    data: web::Data<AppState>,
+    message: web::Json<MainMessage>,
+    auth: BearerAuth,
+) -> impl Responder {
+    HttpResponse::Ok().json(decision_afterhalfacceptance_(auth.token(), &data, &message))
+}
+
+fn decision_afterhalfacceptance_(
+    raw_token: &str,
+    data: &web::Data<AppState>,
+    message: &web::Json<MainMessage>,
+) -> RetNormalMove {
+    match parse_token_and_get_room_info(raw_token, data) {
+        Err(why_illegal) => RetNormalMove::Err { why_illegal },
+        Ok(room_info) => data.analyze_main_message_and_update(**message, &room_info),
     }
 }
 
