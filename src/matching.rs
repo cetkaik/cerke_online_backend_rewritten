@@ -116,19 +116,13 @@ pub fn random_entry_(is_staging: bool, data: &web::Data<AppState>) -> RetRandomE
 
         let is_ia_owner_s_turn =
             is_first_turn_newtoken_turn[0 /* spring */].result == is_ia_down_for_newtoken;
+
+        let (initial_state,_) = cetkaik_full_state_transition::initial_state().choose();
         room_to_gamestate.insert(
             room_id,
             GameState {
-                tam_itself_is_tam_hue: true,
-                season: Season::Iei2,
-                rate: Rate::X1,
-                ia_owner_s_score: 20,
-                is_ia_owner_s_turn,
-                f: absolute::Field {
-                    board: absolute::yhuap_initial_board(),
-                    a_side_hop1zuo1: vec![],
-                    ia_side_hop1zuo1: vec![],
-                },
+                state: initial_state,
+                config: cetkaik_full_state_transition::Config::cerke_online_alpha(),
                 waiting_for_after_half_acceptance: None,
                 moves_to_be_polled: [vec![], vec![], vec![], vec![]],
             },
@@ -182,19 +176,12 @@ pub fn vs_cpu_entry_(is_staging: bool, data: &web::Data<AppState>) -> RetVsCpuEn
     );
 
     rooms_where_opponent_is_bot.insert(room_id);
+    let (initial_state,_) = cetkaik_full_state_transition::initial_state().choose();
     room_to_gamestate.insert(
         room_id,
         GameState {
-            tam_itself_is_tam_hue: true,
-            season: Season::Iei2,
-            rate: Rate::X1,
-            ia_owner_s_score: 20,
-            is_ia_owner_s_turn: is_first_turn_newtoken_turn[0].result == is_ia_down_for_newtoken,
-            f: absolute::Field {
-                board: absolute::yhuap_initial_board(),
-                a_side_hop1zuo1: vec![],
-                ia_side_hop1zuo1: vec![],
-            },
+            state: initial_state,
+            config: cetkaik_full_state_transition::Config::cerke_online_alpha(),
             waiting_for_after_half_acceptance: None,
             moves_to_be_polled: [vec![], vec![], vec![], vec![]],
         },

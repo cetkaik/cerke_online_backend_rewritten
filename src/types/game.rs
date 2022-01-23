@@ -1,5 +1,5 @@
 
-use cetkaik_full_state_transition::{Rate, Season};
+use cetkaik_full_state_transition::{Rate, Season, Config, state};
 use cetkaik_core::absolute::Field;
 use rand::{Rng, prelude::ThreadRng};
 use serde::{Deserialize, Serialize};
@@ -10,15 +10,19 @@ use super::MoveToBePolled;
 pub type AbsoluteCoord = cetkaik_core::absolute::Coord;
 
 pub struct GameState {
-    pub f: Field,
-    pub tam_itself_is_tam_hue: bool,
-    pub is_ia_owner_s_turn: bool,
+    pub state: state::A,
+    pub config: Config,
     pub waiting_for_after_half_acceptance: Option<SrcStep>,
-    pub season: Season,
-    pub ia_owner_s_score: isize,
-    pub rate: Rate,
     pub moves_to_be_polled: [Vec<MovePiece>; 4],
 }
+
+impl GameState { 
+    fn is_ia_owner_s_turn(&self) -> bool {
+        self.state.whose_turn == cetkaik_core::absolute::Side::IASide
+    }
+}
+
+
 pub struct SrcStep {
     pub src: AbsoluteCoord,
     pub step: AbsoluteCoord,
