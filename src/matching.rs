@@ -1,8 +1,7 @@
 use crate::{
-    types::{RetRandomCancel, RetRandomEntry, RetRandomPoll, RetVsCpuEntry, WhoGoesFirst},
-    BotToken, GameState, RoomId, RoomInfoWithPerspective,
+    types::{RetRandomCancel, RetRandomEntry, RetRandomPoll, RetVsCpuEntry, WhoGoesFirst, BotToken, GameState, RoomId, RoomInfoWithPerspective}    
 };
-use crate::{AccessToken, AppState, MsgWithAccessToken};
+use crate::types::{AccessToken, AppState, MsgWithAccessToken};
 use actix_web::web;
 use big_s::S;
 use cetkaik_core::absolute;

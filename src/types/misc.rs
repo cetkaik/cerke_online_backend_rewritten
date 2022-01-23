@@ -1,6 +1,13 @@
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 
+use cetkaik_full_state_transition::{Rate, Season};
+
+
+use cetkaik_core::absolute::Field;
+use uuid::Uuid;
+
+
 /// A type that serialize into `{}`.
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Debug)]
 pub struct Unit {}
@@ -371,7 +378,93 @@ pub enum MoveToBePolled {
 
 #[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct FinalResult {
-    dest: AbsoluteCoord,
-    water_entry_ciurl: Option<Ciurl>,
-    thwarted_by_failing_water_entry_ciurl: Option<Ciurl>,
+    pub dest: AbsoluteCoord,
+    pub water_entry_ciurl: Option<Ciurl>,
+    pub thwarted_by_failing_water_entry_ciurl: Option<Ciurl>,
+}
+
+
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+
+pub struct RoomId(pub Uuid);
+
+impl std::fmt::Display for RoomId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+pub struct AccessToken(pub Uuid);
+
+impl AccessToken {
+    /// # Errors
+    /// Returns `Err` if the Uuid is not valid
+    pub fn parse_str(s: &str) -> Result<Self, uuid::Error> {
+        Ok(Self(Uuid::parse_str(s)?))
+    }
+}
+
+impl std::fmt::Display for AccessToken {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0.to_hyphenated().to_string())
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+pub struct BotToken(pub Uuid);
+
+impl BotToken {
+    /// # Errors
+    /// Returns `Err` if the Uuid is not valid
+    pub fn parse_str(s: &str) -> Result<Self, uuid::Error> {
+        Ok(Self(Uuid::parse_str(s)?))
+    }
+}
+
+impl std::fmt::Display for BotToken {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0.to_hyphenated().to_string(),)
+    }
+}
+
+pub struct SrcStep {
+    pub src: AbsoluteCoord,
+    pub step: AbsoluteCoord,
+}
+
+pub struct GameState {
+    pub f: Field,
+    pub tam_itself_is_tam_hue: bool,
+    pub is_ia_owner_s_turn: bool,
+    pub waiting_for_after_half_acceptance: Option<SrcStep>,
+    pub season: Season,
+    pub ia_owner_s_score: isize,
+    pub rate: Rate,
+    pub moves_to_be_polled: [Vec<MovePiece>; 4],
+}
+
+pub enum HandCompletionStatus {
+    TyMok,
+    TaXot,
+    NotYetDetermined,
+}
+
+pub struct MovePiece {
+    pub mov: MoveToBePolled,
+    pub status: Option<HandCompletionStatus>,
+    pub by_ia_owner: bool,
+}
+
+#[derive(Debug, Clone)]
+pub struct RoomInfoWithPerspective {
+    pub room_id: RoomId,
+    pub is_first_move_my_move: [WhoGoesFirst; 4],
+    pub is_ia_down_for_me: bool,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
+
+pub struct MsgWithAccessToken {
+    pub access_token: String,
 }
