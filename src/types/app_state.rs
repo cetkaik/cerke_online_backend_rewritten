@@ -1,14 +1,14 @@
 
-use cetkaik_full_state_transition::{Rate, Season};
-use serde::{Deserialize, Serialize};
+
+
 use std::collections::{HashMap, HashSet};
-use std::{env, sync::Mutex};
+use std::{sync::Mutex};
 use crate::types::{
-    AbsoluteCoord, AfterHalfAcceptanceMessage, MainMessage, MoveToBePolled, RetAfterHalfAcceptance,
+    AfterHalfAcceptanceMessage, MainMessage, RetAfterHalfAcceptance,
     RetInfPoll, RetMainPoll, RetNormalMove, RetTaXot, RetTyMok, RetWhetherTyMokPoll,
-    TamMoveInternal, WhoGoesFirst,
+    TamMoveInternal,
 };
-use uuid::Uuid;
+
 use super::{AccessToken,RoomInfoWithPerspective,RoomId,GameState};
 
 pub struct AppState {
@@ -22,8 +22,8 @@ pub struct AppState {
 impl AppState {
     pub fn analyze_afterhalfacceptance_message_and_update(
         &self,
-        message: AfterHalfAcceptanceMessage,
-        room_info: &RoomInfoWithPerspective,
+        _message: AfterHalfAcceptanceMessage,
+        _room_info: &RoomInfoWithPerspective,
     ) -> RetAfterHalfAcceptance {
         todo!()
     }
@@ -33,7 +33,7 @@ impl AppState {
         room_info: &RoomInfoWithPerspective,
     ) -> RetNormalMove {
         let mut room_to_gamestate = self.room_to_gamestate.lock().unwrap();
-        let mut game_state: &mut GameState = room_to_gamestate
+        let _game_state: &mut GameState = room_to_gamestate
             .get_mut(&room_info.room_id)
             .expect("FIXME: cannot happen");
 
@@ -46,7 +46,7 @@ impl AppState {
                         second_dest,
                     },
             } => {
-                let message = cetkaik_full_state_transition::message::NormalMove::TamMoveNoStep {
+                let _message = cetkaik_full_state_transition::message::NormalMove::TamMoveNoStep {
                     src,
                     first_dest,
                     second_dest,
@@ -63,7 +63,7 @@ impl AppState {
                         second_dest,
                     },
             } => {
-                let message =
+                let _message =
                     cetkaik_full_state_transition::message::NormalMove::TamMoveStepsDuringFormer {
                         src,
                         step,
@@ -82,7 +82,7 @@ impl AppState {
                         second_dest,
                     },
             } => {
-                let message =
+                let _message =
                     cetkaik_full_state_transition::message::NormalMove::TamMoveStepsDuringLatter {
                         src,
                         step,
@@ -99,7 +99,7 @@ impl AppState {
 
     pub fn receive_tymok_and_update(&self, room_info: &RoomInfoWithPerspective) -> RetTyMok {
         let mut room_to_gamestate = self.room_to_gamestate.lock().unwrap();
-        let mut game_state: &mut GameState = room_to_gamestate
+        let _game_state: &mut GameState = room_to_gamestate
             .get_mut(&room_info.room_id)
             .expect("FIXME: cannot happen");
         todo!()
@@ -107,7 +107,7 @@ impl AppState {
 
     pub fn receive_taxot_and_update(&self, room_info: &RoomInfoWithPerspective) -> RetTaXot {
         let mut room_to_gamestate = self.room_to_gamestate.lock().unwrap();
-        let mut game_state: &mut GameState = room_to_gamestate
+        let _game_state: &mut GameState = room_to_gamestate
             .get_mut(&room_info.room_id)
             .expect("FIXME: cannot happen");
         todo!()
@@ -118,7 +118,7 @@ impl AppState {
         room_info: &RoomInfoWithPerspective,
     ) -> RetWhetherTyMokPoll {
         let mut room_to_gamestate = self.room_to_gamestate.lock().unwrap();
-        let mut game_state: &mut GameState = room_to_gamestate
+        let _game_state: &mut GameState = room_to_gamestate
             .get_mut(&room_info.room_id)
             .expect("FIXME: cannot happen");
         todo!()
@@ -126,7 +126,7 @@ impl AppState {
 
     pub fn reply_to_main_poll(&self, room_info: &RoomInfoWithPerspective) -> RetMainPoll {
         let mut room_to_gamestate = self.room_to_gamestate.lock().unwrap();
-        let mut game_state: &mut GameState = room_to_gamestate
+        let _game_state: &mut GameState = room_to_gamestate
             .get_mut(&room_info.room_id)
             .expect("FIXME: cannot happen");
 
@@ -135,7 +135,7 @@ impl AppState {
 
     pub fn reply_to_inf_poll(&self, room_info: &RoomInfoWithPerspective) -> RetInfPoll {
         let mut room_to_gamestate = self.room_to_gamestate.lock().unwrap();
-        let mut game_state: &mut GameState = room_to_gamestate
+        let _game_state: &mut GameState = room_to_gamestate
             .get_mut(&room_info.room_id)
             .expect("FIXME: cannot happen");
         todo!()
