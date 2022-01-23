@@ -249,17 +249,25 @@ async fn main() -> std::io::Result<()> {
     });
 
     HttpServer::new(move || {
+        let cors = Cors::default()
+            .allowed_methods(vec!["GET", "POST"])
+            .allowed_headers(vec![
+                header::ORIGIN,
+                header::CONTENT_TYPE,
+                header::ACCEPT,
+                header::AUTHORIZATION,
+            ]);
+
+        let origin = env::var("ORIGIN");
+        let cors = if let Ok(origin) = origin { 
+            cors.allowed_origin(&origin)
+        } else { 
+            cors.allow_any_origin().send_wildcard()
+        };
+
         App::new()
             .wrap(
-                Cors::default()
-                    .allowed_origin("*")
-                    .allowed_methods(vec!["GET", "POST"])
-                    .allowed_headers(vec![
-                        header::ORIGIN,
-                        header::CONTENT_TYPE,
-                        header::ACCEPT,
-                        header::AUTHORIZATION,
-                    ]),
+                cors,
             )
             .app_data(app_state.clone())
             .route("/", web::get().to(index))
