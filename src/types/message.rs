@@ -22,6 +22,51 @@ pub enum MainMessage {
 }
 
 #[derive(Serialize, Deserialize, Debug, Copy, Clone, Eq, PartialEq)]
+pub struct MainMessageStruct {
+    message: MainMessage, 
+}
+impl From<MainMessage> for MainMessageStruct {
+    fn from(message: MainMessage) -> Self {
+        Self { 
+            message
+        }
+    }
+}
+
+#[test]
+fn test_ser_normalmove_nontam(){
+    use cetkaik_core::absolute::{Row,Column};
+    let mms :MainMessageStruct = MainMessage::NonTamMove { 
+        data : NonTamMoveDotData::SrcDst { 
+            src: cetkaik_core::absolute::Coord(Row::AI,Column::C),
+            dest: cetkaik_core::absolute::Coord(Row::Y,Column::C),
+            water_entry_ciurl: None 
+        },
+    }.into();
+    let json_str = r#"{"message":{"type":"NonTamMove","data":{"type":"SrcDst","src":["AI","C"],"dest":["O","C"]}}}"#;
+    assert_eq!(json_str, serde_json::to_string(&mms).unwrap() );
+
+}
+
+#[test]
+fn test_normalmove_nontam(){
+    use cetkaik_core::absolute::{Row,Column};
+    let json_str = r#"{"message":{"type":"NonTamMove","data":{"type":"SrcDst","src":["AI","C"],"dest":["O","C"]}}}"#;
+    let result: MainMessageStruct = serde_json::from_str(json_str).unwrap();
+    let MainMessageStruct{ message: result } = result;
+    
+    assert_eq!(result, MainMessage::NonTamMove { 
+        data : NonTamMoveDotData::SrcDst { 
+            src: cetkaik_core::absolute::Coord(Row::AI,Column::C),
+            dest: cetkaik_core::absolute::Coord(Row::O,Column::C),
+            water_entry_ciurl: None 
+        },
+    });
+
+}
+
+
+#[derive(Serialize, Deserialize, Debug, Copy, Clone, Eq, PartialEq)]
 #[serde(tag = "type")]
 pub enum AfterHalfAcceptanceMessage {
     AfterHalfAcceptance { dest: Option<AbsoluteCoord> },

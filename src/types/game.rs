@@ -90,20 +90,114 @@ pub enum NonTamMoveDotData {
     FromHand {
         color: Color,
         profession: Profession,
+        #[serde(serialize_with="serialize_coord",deserialize_with="deserialize_coord")]
         dest: AbsoluteCoord,
     },
     SrcDst {
+        #[serde(serialize_with="serialize_coord",deserialize_with="deserialize_coord")]
         src: AbsoluteCoord,
+        #[serde(serialize_with="serialize_coord",deserialize_with="deserialize_coord")]
         dest: AbsoluteCoord,
+        #[serde(skip_serializing_if = "Option::is_none")]
         water_entry_ciurl: Option<Ciurl>,
     },
     SrcStepDstFinite {
+        #[serde(serialize_with="serialize_coord",deserialize_with="deserialize_coord")]
         src: AbsoluteCoord,
+        #[serde(serialize_with="serialize_coord",deserialize_with="deserialize_coord")]
         step: AbsoluteCoord,
+        #[serde(serialize_with="serialize_coord",deserialize_with="deserialize_coord")]
         dest: AbsoluteCoord,
+        #[serde(skip_serializing_if = "Option::is_none")]
         water_entry_ciurl: Option<Ciurl>,
     },
 }
+fn serialize_coord<S>(value: &AbsoluteCoord, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer {
+        use serde::ser::SerializeSeq;
+        let mut seq = serializer.serialize_seq(Some(2))?;
+        seq.serialize_element(&value.0)?;
+        seq.serialize_element(&value.1)?;
+        seq.end()
+    }
+
+struct CoordVisitor;
+
+impl<'de> serde::de::Visitor<'de> for CoordVisitor {
+    type Value = AbsoluteCoord;
+
+    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(formatter, "a coordinate")
+    }
+
+    fn visit_seq<V>(self, mut visitor: V) -> Result<AbsoluteCoord, V::Error> where
+    V: serde::de::SeqAccess<'de>{
+        use cetkaik_core::absolute::{Column,Row,Coord};
+        let mut column = None;
+        let mut row = None;
+        
+        for i in 0..2 {
+            if let Some(item) = visitor.next_element()? {
+                match item {
+                    "C" => { column = Some(Column::C)}
+                    "K" => { column = Some(Column::K)}
+                    "L" => { column = Some(Column::L)}
+                    "M" => { column = Some(Column::M)}
+                    "N" => { column = Some(Column::N)}
+                    "P" => { column = Some(Column::P)}
+                    "T" => { column = Some(Column::T)}
+                    "X" => { column = Some(Column::X)}
+                    "Z" => { column = Some(Column::Z)}
+
+                    "A" => { row = Some(Row::A)} 
+                    "AI" => { row = Some(Row::AI)} 
+                    "AU" => { row = Some(Row::AU)} 
+                    "E" => { row = Some(Row::E)} 
+                    "I" => { row = Some(Row::I)} 
+                    "O" => { row = Some(Row::O)} 
+                    "U" => { row = Some(Row::U)} 
+                    "Y" => { row = Some(Row::Y)} 
+                    "IA" => { row = Some(Row::IA)} 
+
+                    _ => {
+                        return Err(serde::de::Error::invalid_value(
+                            serde::de::Unexpected::Str(item),
+                            &self,
+                        ))
+                    }
+                }
+            } else { 
+                return Err(
+                    serde::de::Error::invalid_length(i, &"2")
+                );
+            }
+        }
+
+        if let Some(column) = column { 
+            if let Some(row) = row {
+                Ok( Coord(row, column) )
+            } else {
+                Err(
+                    serde::de::Error::missing_field("row")
+                )
+            }
+        } else {
+            Err(
+                serde::de::Error::missing_field("column")
+            )
+        }
+
+    }
+}
+
+fn deserialize_coord<'de, D>(deserializer: D) -> Result<AbsoluteCoord, D::Error>
+where
+D: serde::Deserializer<'de> {
+    let visitor = CoordVisitor;
+    deserializer.deserialize_tuple(2, visitor)
+}
+
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Copy, Clone)]
 #[serde(tag = "stepStyle")]
