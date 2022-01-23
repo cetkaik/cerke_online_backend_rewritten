@@ -23,7 +23,7 @@ pub enum MainMessage {
 
 #[derive(Serialize, Deserialize, Debug, Copy, Clone, Eq, PartialEq)]
 pub struct MainMessageStruct {
-    message: MainMessage, 
+    pub message: MainMessage, 
 }
 impl From<MainMessage> for MainMessageStruct {
     fn from(message: MainMessage) -> Self {
