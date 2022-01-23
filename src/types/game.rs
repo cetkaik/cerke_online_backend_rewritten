@@ -9,16 +9,35 @@ use super::MoveToBePolled;
 
 pub type AbsoluteCoord = cetkaik_core::absolute::Coord;
 
+
+pub enum Phase { 
+    Start(state::A),
+    BeforeCiurl(state::CWithoutCiurl),
+    AfterCiurl(state::C),
+    Moved(state::HandNotResolved),
+}
+
+impl Phase { 
+    pub fn whose_turn (&self) -> cetkaik_core::absolute::Side {
+        match self {
+            Phase::Start(x) => x.whose_turn,
+            Phase::BeforeCiurl(x) => x.whose_turn,
+            Phase::AfterCiurl(x) => x.c.whose_turn,
+            Phase::Moved(x ) => x.whose_turn,
+        }
+    }
+}
+
 pub struct GameState {
-    pub state: state::A,
+    pub state: Phase,
     pub config: Config,
     pub waiting_for_after_half_acceptance: Option<SrcStep>,
     pub moves_to_be_polled: [Vec<MovePiece>; 4],
 }
 
 impl GameState { 
-    fn is_ia_owner_s_turn(&self) -> bool {
-        self.state.whose_turn == cetkaik_core::absolute::Side::IASide
+    pub fn is_ia_owner_s_turn(&self) -> bool {
+        self.state.whose_turn() == cetkaik_core::absolute::Side::IASide
     }
 }
 

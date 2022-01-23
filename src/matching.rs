@@ -1,6 +1,4 @@
-use crate::{
-    types::{RetRandomCancel, RetRandomEntry, RetRandomPoll, RetVsCpuEntry, WhoGoesFirst, BotToken, GameState, RoomId, RoomInfoWithPerspective}    
-};
+use crate::{types::{BotToken, GameState, Phase, RetRandomCancel, RetRandomEntry, RetRandomPoll, RetVsCpuEntry, RoomId, RoomInfoWithPerspective, WhoGoesFirst}};
 use crate::types::{AccessToken, AppState, MsgWithAccessToken};
 use actix_web::web;
 use big_s::S;
@@ -121,7 +119,7 @@ pub fn random_entry_(is_staging: bool, data: &web::Data<AppState>) -> RetRandomE
         room_to_gamestate.insert(
             room_id,
             GameState {
-                state: initial_state,
+                state: Phase::Start(initial_state),
                 config: cetkaik_full_state_transition::Config::cerke_online_alpha(),
                 waiting_for_after_half_acceptance: None,
                 moves_to_be_polled: [vec![], vec![], vec![], vec![]],
@@ -180,7 +178,7 @@ pub fn vs_cpu_entry_(is_staging: bool, data: &web::Data<AppState>) -> RetVsCpuEn
     room_to_gamestate.insert(
         room_id,
         GameState {
-            state: initial_state,
+            state: Phase::Start(initial_state),
             config: cetkaik_full_state_transition::Config::cerke_online_alpha(),
             waiting_for_after_half_acceptance: None,
             moves_to_be_polled: [vec![], vec![], vec![], vec![]],

@@ -3,13 +3,15 @@
 
 use std::collections::{HashMap, HashSet};
 use std::{sync::Mutex};
+use cetkaik_full_state_transition::state::HandResolved;
+
 use crate::types::{
     AfterHalfAcceptanceMessage, MainMessage, RetAfterHalfAcceptance,
     RetInfPoll, RetMainPoll, RetNormalMove, RetTaXot, RetTyMok, RetWhetherTyMokPoll,
     TamMoveInternal,
 };
 
-use super::{AccessToken,RoomInfoWithPerspective,RoomId,GameState};
+use super::{AccessToken, GameState, Phase, RoomId, RoomInfoWithPerspective, WhoGoesFirst};
 
 pub struct AppState {
     pub access_counter: Mutex<i32>,
@@ -99,18 +101,67 @@ impl AppState {
 
     pub fn receive_tymok_and_update(&self, room_info: &RoomInfoWithPerspective) -> RetTyMok {
         let mut room_to_gamestate = self.room_to_gamestate.lock().unwrap();
-        let _game_state: &mut GameState = room_to_gamestate
+        let game_state: &mut GameState = room_to_gamestate
             .get_mut(&room_info.room_id)
             .expect("FIXME: cannot happen");
-        todo!()
+        
+        let ia_side = room_info.is_ia_down_for_me;
+        if ia_side != game_state.is_ia_owner_s_turn() { 
+            return RetTyMok::Err;
+        }
+        
+        if let Phase::Moved(state) = &game_state.state {
+            let state_resolved = cetkaik_full_state_transition::resolve(&state, game_state.config);
+            if let HandResolved::HandExists { if_taxot, if_tymok } = state_resolved {
+                game_state.state = Phase::Start(if_tymok);
+                RetTyMok::Ok
+            } else { 
+                RetTyMok::Err
+            }
+        } else {
+            RetTyMok::Err
+        }
     }
 
     pub fn receive_taxot_and_update(&self, room_info: &RoomInfoWithPerspective) -> RetTaXot {
         let mut room_to_gamestate = self.room_to_gamestate.lock().unwrap();
-        let _game_state: &mut GameState = room_to_gamestate
+        let game_state: &mut GameState = room_to_gamestate
             .get_mut(&room_info.room_id)
             .expect("FIXME: cannot happen");
-        todo!()
+
+        let ia_side = room_info.is_ia_down_for_me;
+        if ia_side != game_state.is_ia_owner_s_turn() { 
+            return RetTaXot::Err;
+        }
+
+        if let Phase::Moved(state) = &game_state.state {
+            let state_resolved = cetkaik_full_state_transition::resolve(&state, game_state.config);
+            if let HandResolved::HandExists { if_taxot, if_tymok }  = state_resolved {
+                game_state.state = match if_taxot {
+                    cetkaik_full_state_transition::IfTaxot::NextSeason(p_state) => {
+                        Phase::Start(p_state.choose().0)
+                    },
+                    cetkaik_full_state_transition::IfTaxot::VictoriousSide(_) => {
+                        return RetTaXot::Ok { 
+                            is_first_move_my_move: None
+                        }
+                    },
+                };
+                
+                let mut whos_go_first = WhoGoesFirst::new(&mut rand::thread_rng());
+                if whos_go_first.result != game_state.is_ia_owner_s_turn() {
+                    whos_go_first = whos_go_first.not();
+                }
+
+                RetTaXot::Ok { 
+                    is_first_move_my_move: Some(whos_go_first)
+                }
+            } else { 
+                RetTaXot::Err
+            }
+        } else {
+            RetTaXot::Err
+        }
     }
 
     pub fn reply_to_whether_tymok_poll(
