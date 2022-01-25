@@ -74,6 +74,23 @@ pub enum Color {
     Huok2 = 1,
 }
 
+impl From<Color> for cetkaik_core::Color {
+    fn from(color: Color) -> Self {
+        match color {
+            Color::Kok1 => Self::Kok1,
+            Color::Huok2 => Self::Huok2,
+        }
+    }
+}
+impl From<cetkaik_core::Color> for Color {
+    fn from(color: cetkaik_core::Color) -> Self {
+        match color {
+            cetkaik_core::Color::Kok1 => Self::Kok1,
+            cetkaik_core::Color::Huok2 => Self::Huok2,
+        }
+    }
+}
+
 #[derive(Serialize_repr, Deserialize_repr, PartialEq, Eq, Debug, Copy, Clone)]
 #[repr(u8)]
 pub enum Profession {
