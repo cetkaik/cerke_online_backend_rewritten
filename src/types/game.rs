@@ -106,6 +106,40 @@ pub enum Profession {
     Io = 9,
 }
 
+impl From<Profession> for cetkaik_core::Profession {
+    fn from(prof: Profession) -> Self {
+        match prof {
+            Profession::Nuak1 => Self::Nuak1,
+            Profession::Kauk2 => Self::Kauk2,
+            Profession::Gua2 => Self::Gua2,
+            Profession::Kaun1 => Self::Kaun1,
+            Profession::Dau2 => Self::Dau2,
+            Profession::Maun1 => Self::Maun1,
+            Profession::Kua2 => Self::Kua2,
+            Profession::Tuk2 => Self::Tuk2,
+            Profession::Uai1 => Self::Uai1,
+            Profession::Io => Self::Io,
+        }
+    }
+}
+
+impl From<cetkaik_core::Profession> for Profession {
+    fn from(prof: cetkaik_core::Profession) -> Self {
+        match prof {
+            cetkaik_core::Profession::Nuak1 => Self::Nuak1,
+            cetkaik_core::Profession::Kauk2 => Self::Kauk2,
+            cetkaik_core::Profession::Gua2 => Self::Gua2,
+            cetkaik_core::Profession::Kaun1 => Self::Kaun1,
+            cetkaik_core::Profession::Dau2 => Self::Dau2,
+            cetkaik_core::Profession::Maun1 => Self::Maun1,
+            cetkaik_core::Profession::Kua2 => Self::Kua2,
+            cetkaik_core::Profession::Tuk2 => Self::Tuk2,
+            cetkaik_core::Profession::Uai1 => Self::Uai1,
+            cetkaik_core::Profession::Io => Self::Io,
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy)]
 // Using boolean is natural, and this is also necessary to allow easy interop with the frontend
 #[allow(clippy::struct_excessive_bools)]
