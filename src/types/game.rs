@@ -154,6 +154,20 @@ impl Ciurl {
     }
 }
 
+impl From<usize> for Ciurl {
+    fn from(cnt: usize) -> Self {
+        use rand::seq::SliceRandom;
+        
+        let s = [false; 5];
+        for i in 0..cnt {
+            s[i] = true;
+        }
+        let rng = rand::thread_rng();
+        s.shuffle(&mut rng);
+        Self(s[0],s[1],s[2],s[3],s[4])
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(tag = "type")]
 pub enum NormalMove {
