@@ -26,6 +26,15 @@ impl Phase {
             Phase::Moved(x ) => x.whose_turn,
         }
     }
+
+    pub fn get_season(&self) -> Season {
+        match self {
+            Phase::Start(x) => x.season,
+            Phase::BeforeCiurl(x) => x.season,
+            Phase::AfterCiurl(x) => x.c.season,
+            Phase::Moved(x ) => x.season,
+        }
+    }
 }
 
 pub struct GameState {
