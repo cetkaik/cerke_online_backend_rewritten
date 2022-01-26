@@ -233,7 +233,7 @@ pub enum RetInfPoll {
     Err { why_illegal: String },
 }
 
-#[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Debug, PartialEq, Eq, Deserialize, Serialize, Clone)]
 #[serde(tag = "type")]
 pub enum MoveToBePolled {
     NonTamMove {
@@ -256,7 +256,7 @@ pub enum MoveToBePolled {
     },
 }
 
-#[derive(Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Debug, PartialEq, Eq, Deserialize, Serialize, Clone)]
 pub struct FinalResult {
     pub dest: AbsoluteCoord,
     pub water_entry_ciurl: Option<Ciurl>,

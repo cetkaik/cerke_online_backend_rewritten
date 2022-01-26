@@ -51,16 +51,19 @@ impl GameState {
 }
 
 
+#[derive(PartialEq, Eq, Debug, Copy, Clone)]
 pub struct SrcStep {
     pub src: AbsoluteCoord,
     pub step: AbsoluteCoord,
 }
 
+#[derive(PartialEq, Eq, Debug, Clone)]
 pub struct MovePiece {
     pub mov: MoveToBePolled,
     pub status: Option<HandCompletionStatus>,
     pub by_ia_owner: bool,
 }
+#[derive(PartialEq, Eq, Debug, Copy, Clone)]
 pub enum HandCompletionStatus {
     TyMok,
     TaXot,
