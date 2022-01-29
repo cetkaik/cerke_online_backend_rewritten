@@ -46,7 +46,6 @@ impl std::fmt::Display for AccessToken {
 
 #[derive(Debug, Clone)]
 pub struct RoomInfoWithPerspective {
-    pub room_id: RoomId,
-    pub is_first_move_my_move: [WhoGoesFirst; 4],
+    pub room_id: RoomId, 
     pub is_ia_down_for_me: bool,
 }

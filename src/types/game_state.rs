@@ -1,3 +1,5 @@
+use std::sync::{Arc, Mutex};
+
 use cetkaik_full_state_transition::{Config, message::{AfterHalfAcceptance, InfAfterStep, NormalMove, PureMove}, state::HandResolved};
 
 use crate::types::FinalResult;
@@ -10,6 +12,7 @@ pub struct GameState {
     pub config: Config,
     pub waiting_for_after_half_acceptance: Option<SrcStep>,
     pub moves_to_be_polled: [Vec<MovePiece>; 4],
+    pub is_first_move_ia_move: Arc<Mutex<[Option<WhoGoesFirst>; 4]>>,
 }
 
 impl GameState { 
@@ -297,6 +300,7 @@ impl GameState {
                 if whos_go_first.result != self.is_ia_owner_s_turn() {
                     whos_go_first = whos_go_first.not();
                 }
+                *(self.is_first_move_ia_move.lock().unwrap().get_mut(self.state.get_season().to_index()).unwrap()) = Some(whos_go_first.clone());
 
                 RetTaXot::Ok { 
                     is_first_move_my_move: Some(whos_go_first)
@@ -316,10 +320,27 @@ impl GameState {
                 HandResolved::NeitherTymokNorTaxot(next_state) => {
                     self.state = Phase::Start(next_state);
                 },
-                HandResolved::HandExists { if_tymok, if_taxot } => todo!(),
-                HandResolved::GameEndsWithoutTymokTaxot(_) => todo!(),
+                HandResolved::HandExists { if_tymok, if_taxot } => {},
+                HandResolved::GameEndsWithoutTymokTaxot(_) => {},
             }
         }
+    }
+    
+    pub fn is_first_move_my_move(&self, is_ia_down_for_me:bool , season: usize) -> WhoGoesFirst {
+        let is_first_move_ia_move = self.is_first_move_ia_move.lock().unwrap().get_mut(season).unwrap().clone().unwrap();
+        if is_ia_down_for_me {
+            is_first_move_ia_move
+        } else {
+            is_first_move_ia_move.not()
+        }
+    }
+
+    pub fn set_first_mover(&mut self, season: usize, is_ia: bool, rng: &mut rand::prelude::ThreadRng) {
+        let mut whos_go_first = WhoGoesFirst::new(rng);
+        if whos_go_first.result != is_ia {
+            whos_go_first = whos_go_first.not();
+        }
+        *(self.is_first_move_ia_move.lock().unwrap().get_mut(season).unwrap()) = Some(whos_go_first);
     }
 
 }
