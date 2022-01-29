@@ -1,8 +1,11 @@
 use std::fmt::Debug;
 
+use cetkaik_core::absolute::Coord;
+use cetkaik_full_state_transition::message::NormalMove;
 use rand::prelude::ThreadRng;
 use serde::{Deserialize, Serialize};
 use super::{AbsoluteCoord, Ciurl, NonTamMoveDotData, TamMoveInternal, bot::TacticsKey};
+use super::serde_coord;
 
 /* InfAfterStep | AfterHalfAcceptance | NormalMove*/
 #[derive(Serialize, Deserialize, Debug, Copy, Clone, Eq, PartialEq)]
@@ -19,6 +22,33 @@ pub enum MainMessage {
         #[serde(flatten)]
         flatten: TamMoveInternal,
     },
+}
+
+impl MainMessage {
+    pub fn process(self) -> MoveToBePolled {
+        match self {
+            MainMessage::InfAfterStep { flatten } => {
+                let InfAfterStepInternal {src,step, coord_signifying_planned_direction} = flatten;
+                MoveToBePolled::InfAfterStep {
+                    src,
+                    step,
+                    coord_signifying_planned_direction,
+                    stepping_ciurl: Ciurl::new(&mut rand::thread_rng()),
+                    final_result: None,
+                }
+            },
+            MainMessage::NonTamMove { data } => {
+                MoveToBePolled::NonTamMove {
+                    data
+                }
+            },
+            MainMessage::TamMove { flatten } => {
+                MoveToBePolled::TamMove {
+                    flatten
+                }
+            },
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Copy, Clone, Eq, PartialEq)]
@@ -69,16 +99,64 @@ fn test_normalmove_nontam(){
 #[derive(Serialize, Deserialize, Debug, Copy, Clone, Eq, PartialEq)]
 #[serde(tag = "type")]
 pub enum AfterHalfAcceptanceMessage {
-    AfterHalfAcceptance { dest: Option<AbsoluteCoord> },
+    AfterHalfAcceptance {
+        #[serde(with="serde_coord::opt")]
+        dest: Option<AbsoluteCoord>
+    },
+}
+
+
+#[test]
+fn test_after_half_null(){
+    use cetkaik_core::absolute::{Row,Column};
+    {
+        let json_str = r#"{
+            "message": {
+                "type": "AfterHalfAcceptance",
+                "dest": null
+            }
+        }"#;
+        let result: AfterHalfAcceptanceMessageStruct = serde_json::from_str(json_str).unwrap();
+        let AfterHalfAcceptanceMessageStruct{ message: result } = result;
+        
+        assert_eq!(result, AfterHalfAcceptanceMessage::AfterHalfAcceptance {  
+            dest: None
+        });
+    }
+    {            
+        let json_str = r#"{
+            "message": {
+                "type": "AfterHalfAcceptance",
+                "dest": [
+                    "O",
+                    "L"
+                ]
+            }
+        }"#;
+        let result: AfterHalfAcceptanceMessageStruct = serde_json::from_str(json_str).unwrap();
+        let AfterHalfAcceptanceMessageStruct{ message: result } = result;
+        
+        assert_eq!(result, AfterHalfAcceptanceMessage::AfterHalfAcceptance {  
+            dest: Some(cetkaik_core::absolute::Coord(Row::O,Column::L)),
+        });
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Copy, Clone, Eq, PartialEq)]
+pub struct AfterHalfAcceptanceMessageStruct {
+    pub message: AfterHalfAcceptanceMessage, 
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Copy, Clone)]
 pub struct InfAfterStepInternal {
-    src: AbsoluteCoord,
-    step: AbsoluteCoord,
+    #[serde(with="serde_coord")]
+    pub src: AbsoluteCoord,
+    #[serde(with="serde_coord")]
+    pub step: AbsoluteCoord,
 
+    #[serde(with="serde_coord")]
     #[serde(rename = "plannedDirection")]
-    coord_signifying_planned_direction: AbsoluteCoord,
+    pub coord_signifying_planned_direction: AbsoluteCoord,
 }
 
 #[derive(Debug, PartialEq, Eq, Deserialize, Serialize, Clone)]
@@ -244,9 +322,12 @@ pub enum MoveToBePolled {
         flatten: TamMoveInternal,
     },
     InfAfterStep {
+        #[serde(with="serde_coord")]
         src: AbsoluteCoord,
+        #[serde(with="serde_coord")]
         step: AbsoluteCoord,
 
+        #[serde(with="serde_coord")]
         #[serde(rename = "plannedDirection")]
         coord_signifying_planned_direction: AbsoluteCoord,
         stepping_ciurl: Ciurl,
@@ -256,8 +337,25 @@ pub enum MoveToBePolled {
     },
 }
 
+impl From<NonTamMoveDotData> for MoveToBePolled {
+    fn from(mov: NonTamMoveDotData) -> Self {
+        Self::NonTamMove {
+            data: mov
+        }
+    }
+}
+impl From<TamMoveInternal> for MoveToBePolled {
+    fn from(mov: TamMoveInternal) -> Self {
+        Self::TamMove {
+            flatten: mov
+        }
+    }
+}
+
+
 #[derive(Debug, PartialEq, Eq, Deserialize, Serialize, Clone)]
-pub struct FinalResult {
+pub struct FinalResult {    
+    #[serde(with="serde_coord")]
     pub dest: AbsoluteCoord,
     pub water_entry_ciurl: Option<Ciurl>,
     pub thwarted_by_failing_water_entry_ciurl: Option<Ciurl>,
