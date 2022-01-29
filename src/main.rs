@@ -1,232 +1,18 @@
 #![warn(clippy::pedantic)]
 #![allow(clippy::unused_async)]
-mod types;
+
+pub mod types;
+pub mod matching;
+pub mod bot;
 
 use actix_cors::Cors;
 use actix_web::http::header;
 use actix_web::{post, web, App, HttpResponse, HttpServer, Responder};
 use actix_web_httpauth::extractors::bearer::BearerAuth;
-use cetkaik_core::absolute::Field;
-use cetkaik_full_state_transition::{Rate, Season};
-use serde::{Deserialize, Serialize};
+use types::RetInfAfterStep;
 use std::collections::{HashMap, HashSet};
 use std::{env, sync::Mutex};
-use types::{
-    AbsoluteCoord, AfterHalfAcceptanceMessage, MainMessage, MoveToBePolled, RetAfterHalfAcceptance,
-    RetInfPoll, RetMainPoll, RetNormalMove, RetTaXot, RetTyMok, RetWhetherTyMokPoll,
-    TamMoveInternal, WhoGoesFirst,
-};
-use uuid::Uuid;
-
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
-pub struct AccessToken(Uuid);
-
-impl AccessToken {
-    /// # Errors
-    /// Returns `Err` if the Uuid is not valid
-    pub fn parse_str(s: &str) -> Result<Self, uuid::Error> {
-        Ok(Self(Uuid::parse_str(s)?))
-    }
-}
-
-impl std::fmt::Display for AccessToken {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0.to_hyphenated().to_string())
-    }
-}
-
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
-pub struct BotToken(Uuid);
-
-impl BotToken {
-    /// # Errors
-    /// Returns `Err` if the Uuid is not valid
-    pub fn parse_str(s: &str) -> Result<Self, uuid::Error> {
-        Ok(Self(Uuid::parse_str(s)?))
-    }
-}
-
-impl std::fmt::Display for BotToken {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0.to_hyphenated().to_string(),)
-    }
-}
-
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
-
-pub struct RoomId(Uuid);
-
-impl std::fmt::Display for RoomId {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-pub struct AppState {
-    access_counter: Mutex<i32>,
-    waiting_list: Mutex<HashSet<AccessToken>>,
-    person_to_room: Mutex<HashMap<AccessToken, RoomInfoWithPerspective>>,
-    rooms_where_opponent_is_bot: Mutex<HashSet<RoomId>>,
-    room_to_gamestate: Mutex<HashMap<RoomId, GameState>>,
-}
-
-impl AppState {
-    pub fn analyze_afterhalfacceptance_message_and_update(
-        &self,
-        message: AfterHalfAcceptanceMessage,
-        room_info: &RoomInfoWithPerspective,
-    ) -> RetAfterHalfAcceptance {
-        todo!()
-    }
-    pub fn analyze_main_message_and_update(
-        &self,
-        message: MainMessage,
-        room_info: &RoomInfoWithPerspective,
-    ) -> RetNormalMove {
-        let mut room_to_gamestate = self.room_to_gamestate.lock().unwrap();
-        let mut game_state: &mut GameState = room_to_gamestate
-            .get_mut(&room_info.room_id)
-            .expect("FIXME: cannot happen");
-
-        match message {
-            MainMessage::TamMove {
-                flatten:
-                    TamMoveInternal::NoStep {
-                        src,
-                        first_dest,
-                        second_dest,
-                    },
-            } => {
-                let message = cetkaik_full_state_transition::message::NormalMove::TamMoveNoStep {
-                    src,
-                    first_dest,
-                    second_dest,
-                };
-                todo!()
-            }
-
-            MainMessage::TamMove {
-                flatten:
-                    TamMoveInternal::StepsDuringFormer {
-                        src,
-                        step,
-                        first_dest,
-                        second_dest,
-                    },
-            } => {
-                let message =
-                    cetkaik_full_state_transition::message::NormalMove::TamMoveStepsDuringFormer {
-                        src,
-                        step,
-                        first_dest,
-                        second_dest,
-                    };
-                todo!()
-            }
-
-            MainMessage::TamMove {
-                flatten:
-                    TamMoveInternal::StepsDuringLatter {
-                        src,
-                        step,
-                        first_dest,
-                        second_dest,
-                    },
-            } => {
-                let message =
-                    cetkaik_full_state_transition::message::NormalMove::TamMoveStepsDuringLatter {
-                        src,
-                        step,
-                        first_dest,
-                        second_dest,
-                    };
-                todo!()
-            }
-            _ => todo!(),
-        }
-
-        todo!()
-    }
-
-    pub fn receive_tymok_and_update(&self, room_info: &RoomInfoWithPerspective) -> RetTyMok {
-        let mut room_to_gamestate = self.room_to_gamestate.lock().unwrap();
-        let mut game_state: &mut GameState = room_to_gamestate
-            .get_mut(&room_info.room_id)
-            .expect("FIXME: cannot happen");
-        todo!()
-    }
-
-    pub fn receive_taxot_and_update(&self, room_info: &RoomInfoWithPerspective) -> RetTaXot {
-        let mut room_to_gamestate = self.room_to_gamestate.lock().unwrap();
-        let mut game_state: &mut GameState = room_to_gamestate
-            .get_mut(&room_info.room_id)
-            .expect("FIXME: cannot happen");
-        todo!()
-    }
-
-    pub fn reply_to_whether_tymok_poll(
-        &self,
-        room_info: &RoomInfoWithPerspective,
-    ) -> RetWhetherTyMokPoll {
-        let mut room_to_gamestate = self.room_to_gamestate.lock().unwrap();
-        let mut game_state: &mut GameState = room_to_gamestate
-            .get_mut(&room_info.room_id)
-            .expect("FIXME: cannot happen");
-        todo!()
-    }
-
-    pub fn reply_to_main_poll(&self, room_info: &RoomInfoWithPerspective) -> RetMainPoll {
-        let mut room_to_gamestate = self.room_to_gamestate.lock().unwrap();
-        let mut game_state: &mut GameState = room_to_gamestate
-            .get_mut(&room_info.room_id)
-            .expect("FIXME: cannot happen");
-
-        todo!()
-    }
-
-    pub fn reply_to_inf_poll(&self, room_info: &RoomInfoWithPerspective) -> RetInfPoll {
-        let mut room_to_gamestate = self.room_to_gamestate.lock().unwrap();
-        let mut game_state: &mut GameState = room_to_gamestate
-            .get_mut(&room_info.room_id)
-            .expect("FIXME: cannot happen");
-        todo!()
-    }
-}
-
-struct SrcStep {
-    src: AbsoluteCoord,
-    step: AbsoluteCoord,
-}
-
-struct GameState {
-    f: Field,
-    tam_itself_is_tam_hue: bool,
-    is_ia_owner_s_turn: bool,
-    waiting_for_after_half_acceptance: Option<SrcStep>,
-    season: Season,
-    ia_owner_s_score: isize,
-    rate: Rate,
-    moves_to_be_polled: [Vec<MovePiece>; 4],
-}
-
-enum HandCompletionStatus {
-    TyMok,
-    TaXot,
-    NotYetDetermined,
-}
-
-struct MovePiece {
-    mov: MoveToBePolled,
-    status: Option<HandCompletionStatus>,
-    by_ia_owner: bool,
-}
-
-#[derive(Debug, Clone)]
-pub struct RoomInfoWithPerspective {
-    room_id: RoomId,
-    is_first_move_my_move: [WhoGoesFirst; 4],
-    is_ia_down_for_me: bool,
-}
+use crate::types::{AccessToken, AfterHalfAcceptanceMessageStruct, AppState, MainMessage, MainMessageStruct, MsgWithAccessToken, RetAfterHalfAcceptance, RetInfPoll, RetMainPoll, RetNormalMove, RetTaXot, RetTyMok, RetWhetherTyMokPoll, RoomInfoWithPerspective};
 
 async fn index(data: web::Data<AppState>) -> String {
     let mut counter = data.access_counter.lock().unwrap();
@@ -277,6 +63,9 @@ async fn main() -> std::io::Result<()> {
             .service(whethertymok_taxot)
             .service(whethertymokpoll)
             .service(decision_main)
+            .service(slow2)
+            .service(decision_normalmove)
+            .service(decision_infafterstep)
             .service(random_entry)
             .service(random_poll)
             .service(random_cancel)
@@ -322,7 +111,7 @@ async fn whethertymok_tymok(data: web::Data<AppState>, auth: BearerAuth) -> impl
 
 fn whethertymok_tymok_(raw_token: &str, data: &web::Data<AppState>) -> RetTyMok {
     match parse_token_and_get_room_info(raw_token, data) {
-        Err(why_illegal) => RetTyMok::Err,
+        Err(_why_illegal) => RetTyMok::Err,
         Ok(room_info) => data.receive_tymok_and_update(&room_info),
     }
 }
@@ -334,7 +123,7 @@ async fn whethertymok_taxot(data: web::Data<AppState>, auth: BearerAuth) -> impl
 
 fn whethertymok_taxot_(raw_token: &str, data: &web::Data<AppState>) -> RetTaXot {
     match parse_token_and_get_room_info(raw_token, data) {
-        Err(why_illegal) => RetTaXot::Err,
+        Err(_why_illegal) => RetTaXot::Err,
         Ok(room_info) => data.receive_taxot_and_update(&room_info),
     }
 }
@@ -363,11 +152,12 @@ async fn decision_main(
 #[post("/decision/afterhalfacceptance")]
 async fn slow2(
     data: web::Data<AppState>,
-    message: web::Json<AfterHalfAcceptanceMessage>,
+    message: web::Json<AfterHalfAcceptanceMessageStruct>,
     auth: BearerAuth,
 ) -> impl Responder {
     HttpResponse::Ok().json(slow2_(auth.token(), &data, &message))
 }
+
 
 fn parse_token_and_get_room_info(
     raw_token: &str,
@@ -402,11 +192,51 @@ fn slow_(
 fn slow2_(
     raw_token: &str,
     data: &web::Data<AppState>,
-    message: &web::Json<AfterHalfAcceptanceMessage>,
+    message: &web::Json<AfterHalfAcceptanceMessageStruct>,
 ) -> RetAfterHalfAcceptance {
     match parse_token_and_get_room_info(raw_token, data) {
         Err(why_illegal) => RetAfterHalfAcceptance::Err { why_illegal },
-        Ok(room_info) => data.analyze_afterhalfacceptance_message_and_update(**message, &room_info),
+        Ok(room_info) => data.analyze_afterhalfacceptance_message_and_update(message.message, &room_info),
+    }
+}
+
+#[post("/decision/infafterstep")]
+async fn decision_infafterstep(
+    data: web::Data<AppState>,
+    message: web::Json<MainMessageStruct>,
+    auth: BearerAuth,
+) -> impl Responder {
+    HttpResponse::Ok().json(decision_infafterstep_(auth.token(), &data, &message))
+}
+
+fn decision_infafterstep_(
+    raw_token: &str,
+    data: &web::Data<AppState>,
+    message: &web::Json<MainMessageStruct>,
+) -> RetInfAfterStep {
+    match parse_token_and_get_room_info(raw_token, data) {
+        Err(why_illegal) => RetInfAfterStep::Err { why_illegal },
+        Ok(room_info) => data.analyze_inf_after_step_and_update(message.message, &room_info),
+    }
+}
+
+#[post("/decision/normalmove")]
+async fn decision_normalmove(
+    data: web::Data<AppState>,
+    message: web::Json<MainMessageStruct>,
+    auth: BearerAuth,
+) -> impl Responder {
+    HttpResponse::Ok().json(decision_normalmove_(auth.token(), &data, &message))
+}
+
+fn decision_normalmove_(
+    raw_token: &str,
+    data: &web::Data<AppState>,
+    message: &web::Json<MainMessageStruct>,
+) -> RetNormalMove {
+    match parse_token_and_get_room_info(raw_token, data) {
+        Err(why_illegal) => RetNormalMove::Err { why_illegal },
+        Ok(room_info) => data.analyze_main_message_and_update(message.message, &room_info),
     }
 }
 
@@ -435,7 +265,6 @@ async fn random_poll_staging(
 ) -> impl Responder {
     HttpResponse::Ok().json(matching::random_entrance_poll_(true, &msg, &data))
 }
-mod matching;
 
 #[post("/matching/random/cancel")]
 async fn random_cancel(
@@ -451,12 +280,6 @@ async fn random_cancel_staging(
     data: web::Data<AppState>,
 ) -> impl Responder {
     HttpResponse::Ok().json(matching::random_entrance_cancel(true, &msg, &data))
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
-
-pub struct MsgWithAccessToken {
-    access_token: String,
 }
 
 #[post("/matching/vs_cpu/entry")]

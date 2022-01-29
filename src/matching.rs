@@ -1,11 +1,10 @@
-use crate::{
-    types::{RetRandomCancel, RetRandomEntry, RetRandomPoll, RetVsCpuEntry, WhoGoesFirst},
-    BotToken, GameState, RoomId, RoomInfoWithPerspective,
-};
-use crate::{AccessToken, AppState, MsgWithAccessToken};
+use std::sync::{Arc, Mutex};
+
+use crate::{types::{BotToken, GameState, Phase, RetRandomCancel, RetRandomEntry, RetRandomPoll, RetVsCpuEntry, RoomId, RoomInfoWithPerspective, WhoGoesFirst, game_state}};
+use crate::types::{AccessToken, AppState, MsgWithAccessToken};
 use actix_web::web;
 use big_s::S;
-use cetkaik_core::absolute;
+use cetkaik_core::absolute::{self, Side};
 use cetkaik_full_state_transition::{Rate, Season};
 use uuid::Uuid;
 pub fn random_entrance_poll_(
@@ -15,13 +14,16 @@ pub fn random_entrance_poll_(
 ) -> RetRandomPoll {
     if let Ok(access_token) = AccessToken::parse_str(&msg.access_token) {
         let person_to_room = data.person_to_room.lock().unwrap();
-        if let Some(room_id) = (*person_to_room).get(&access_token) {
+        if let Some(room_perspective) = (*person_to_room).get(&access_token) {
+            let gss = data.room_to_gamestate.lock().unwrap();
+            let game_state: &GameState = gss.get(&room_perspective.room_id).expect("FIXME: cannot happen");
+            let is_first_move_my_move = game_state.is_first_move_my_move(room_perspective.is_ia_down_for_me, 0).clone();
             // You already have a room
             RetRandomPoll::Ok {
                 ret: RetRandomEntry::RoomAlreadyAssigned {
                     access_token: access_token.to_string(),
-                    is_first_move_my_move: room_id.is_first_move_my_move[0].clone(),
-                    is_ia_down_for_me: room_id.is_ia_down_for_me,
+                    is_first_move_my_move,
+                    is_ia_down_for_me: room_perspective.is_ia_down_for_me,
                 },
             }
         } else {
@@ -84,59 +86,45 @@ pub fn random_entry_(is_staging: bool, data: &web::Data<AppState>) -> RetRandomE
         (*waiting_list).remove(&token);
         let room_id = open_a_room(token, new_token, is_staging);
 
-        let is_first_turn_newtoken_turn: [WhoGoesFirst; 4] = [
-            WhoGoesFirst::new(&mut rng),
-            WhoGoesFirst::new(&mut rng),
-            WhoGoesFirst::new(&mut rng),
-            WhoGoesFirst::new(&mut rng),
-        ];
+        let is_first_turn_newtoken_turn = Arc::new(Mutex::new([
+            None,None,None,None
+        ]));
 
         let is_ia_down_for_newtoken: bool = rng.gen();
-
         person_to_room.insert(
             new_token,
             RoomInfoWithPerspective {
-                room_id,
-                is_first_move_my_move: is_first_turn_newtoken_turn.clone(),
+                room_id, 
                 is_ia_down_for_me: is_ia_down_for_newtoken,
             },
         );
         person_to_room.insert(
             token,
             RoomInfoWithPerspective {
-                room_id,
-                is_first_move_my_move: [
-                    is_first_turn_newtoken_turn[0].not(),
-                    is_first_turn_newtoken_turn[1].not(),
-                    is_first_turn_newtoken_turn[2].not(),
-                    is_first_turn_newtoken_turn[3].not(),
-                ],
+                room_id, 
                 is_ia_down_for_me: !is_ia_down_for_newtoken,
             },
         );
 
-        let is_ia_owner_s_turn =
-            is_first_turn_newtoken_turn[0 /* spring */].result == is_ia_down_for_newtoken;
+        let (initial_state,_) = cetkaik_full_state_transition::initial_state().choose();
+        let is_ia_start = initial_state.whose_turn == Side::IASide;
         room_to_gamestate.insert(
             room_id,
             GameState {
-                tam_itself_is_tam_hue: true,
-                season: Season::Iei2,
-                rate: Rate::X1,
-                ia_owner_s_score: 20,
-                is_ia_owner_s_turn,
-                f: absolute::Field {
-                    board: absolute::yhuap_initial_board(),
-                    a_side_hop1zuo1: vec![],
-                    ia_side_hop1zuo1: vec![],
-                },
+                state: Phase::Start(initial_state),
+                config: cetkaik_full_state_transition::Config::cerke_online_alpha(),
                 waiting_for_after_half_acceptance: None,
                 moves_to_be_polled: [vec![], vec![], vec![], vec![]],
+                is_first_move_ia_move: is_first_turn_newtoken_turn
             },
-        );
+        ); 
+        let game_state: &mut GameState = room_to_gamestate.get_mut(&room_id)
+            .expect("FIXME: cannot happen");
+        game_state.set_first_mover(0usize, is_ia_start, &mut rng);
+
         return RetRandomEntry::RoomAlreadyAssigned {
             access_token: format!("{}", new_token),
-            is_first_move_my_move: is_first_turn_newtoken_turn[0 /* spring */].clone(),
+            is_first_move_my_move: game_state.is_first_move_my_move(is_ia_down_for_newtoken, 0),
             is_ia_down_for_me: is_ia_down_for_newtoken,
         };
     }
@@ -162,12 +150,9 @@ pub fn vs_cpu_entry_(is_staging: bool, data: &web::Data<AppState>) -> RetVsCpuEn
     let bot_token = BotToken(Uuid::new_v4());
     let room_id = open_a_room_against_bot(bot_token, new_token, is_staging);
     let mut rng = rand::thread_rng();
-    let is_first_turn_newtoken_turn = [
-        WhoGoesFirst::new(&mut rng),
-        WhoGoesFirst::new(&mut rng),
-        WhoGoesFirst::new(&mut rng),
-        WhoGoesFirst::new(&mut rng),
-    ];
+    let is_first_turn_newtoken_turn = Arc::new(Mutex::new([
+        None, None, None, None
+    ]));
 
     let is_ia_down_for_newtoken: bool = rng.gen();
     let mut person_to_room = data.person_to_room.lock().unwrap();
@@ -176,34 +161,34 @@ pub fn vs_cpu_entry_(is_staging: bool, data: &web::Data<AppState>) -> RetVsCpuEn
     person_to_room.insert(
         new_token,
         RoomInfoWithPerspective {
-            room_id,
-            is_first_move_my_move: is_first_turn_newtoken_turn.clone(),
+            room_id, 
             is_ia_down_for_me: is_ia_down_for_newtoken,
         },
     );
 
     rooms_where_opponent_is_bot.insert(room_id);
+    let (initial_state,_) = cetkaik_full_state_transition::initial_state().choose();
+    let is_ia_start = initial_state.whose_turn == Side::IASide;
     room_to_gamestate.insert(
         room_id,
         GameState {
-            tam_itself_is_tam_hue: true,
-            season: Season::Iei2,
-            rate: Rate::X1,
-            ia_owner_s_score: 20,
-            is_ia_owner_s_turn: is_first_turn_newtoken_turn[0].result == is_ia_down_for_newtoken,
-            f: absolute::Field {
-                board: absolute::yhuap_initial_board(),
-                a_side_hop1zuo1: vec![],
-                ia_side_hop1zuo1: vec![],
-            },
+            state: Phase::Start(initial_state),
+            config: cetkaik_full_state_transition::Config::cerke_online_alpha(),
             waiting_for_after_half_acceptance: None,
             moves_to_be_polled: [vec![], vec![], vec![], vec![]],
+            is_first_move_ia_move: is_first_turn_newtoken_turn
         },
     );
 
+    let game_state: &mut GameState = room_to_gamestate
+        .get_mut(&room_id)
+        .expect("FIXME: cannot happen"); 
+    game_state.set_first_mover(0usize, is_ia_start, &mut rng);
+
+
     RetVsCpuEntry::LetTheGameBegin {
         access_token: format!("{}", new_token),
-        is_first_move_my_move: is_first_turn_newtoken_turn[0].clone(),
+        is_first_move_my_move: game_state.is_first_move_my_move(is_ia_down_for_newtoken, 0),
         is_ia_down_for_me: is_ia_down_for_newtoken,
     }
 }
