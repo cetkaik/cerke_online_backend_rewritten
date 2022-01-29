@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use serde_repr::{Serialize_repr,Deserialize_repr};
 
 use super::MoveToBePolled;
+use super::serde_coord;
 
 pub type AbsoluteCoord = cetkaik_core::absolute::Coord;
 
@@ -36,21 +37,6 @@ impl Phase {
         }
     }
 }
-
-pub struct GameState {
-    pub state: Phase,
-    pub config: Config,
-    pub waiting_for_after_half_acceptance: Option<SrcStep>,
-    pub moves_to_be_polled: [Vec<MovePiece>; 4],
-}
-
-impl GameState { 
-    pub fn is_ia_owner_s_turn(&self) -> bool {
-        self.state.whose_turn() == cetkaik_core::absolute::Side::IASide
-    }
-}
-
-
 #[derive(PartialEq, Eq, Debug, Copy, Clone)]
 pub struct SrcStep {
     pub src: AbsoluteCoord,
