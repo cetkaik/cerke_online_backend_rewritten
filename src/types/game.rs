@@ -10,7 +10,7 @@ use super::serde_coord;
 
 pub type AbsoluteCoord = cetkaik_core::absolute::Coord;
 
-
+#[derive(Debug)]
 pub enum Phase { 
     Start(state::A),
     BeforeCiurl(state::CWithoutCiurl),
@@ -19,6 +19,15 @@ pub enum Phase {
 }
 
 impl Phase { 
+    pub fn phase_name(&self) -> &str {
+        match self {
+            Phase::Start(_) => "Start",
+            Phase::BeforeCiurl(_) => "BeforeCiurl",
+            Phase::AfterCiurl(_) => "AfterCiurl",
+            Phase::Moved(_) => "Moved",
+        }
+    }
+
     pub fn whose_turn (&self) -> cetkaik_core::absolute::Side {
         match self {
             Phase::Start(x) => x.whose_turn,
@@ -168,6 +177,97 @@ pub enum NormalMove {
         flatten: TamMoveInternal,
     },
 }
+
+impl From<cetkaik_full_state_transition::message::NormalMove> for NormalMove {
+    fn from(normal_move : cetkaik_full_state_transition::message::NormalMove) -> Self {
+        use cetkaik_full_state_transition::message::NormalMove as FstNormalMove;
+
+        match normal_move {
+            FstNormalMove::NonTamMoveSrcDst { src, dest } => NormalMove::NonTamMove{
+                data: NonTamMoveDotData::SrcDst {
+                    src, dest, water_entry_ciurl: None
+                },
+            } ,
+            FstNormalMove::NonTamMoveSrcStepDstFinite { src, step, dest } =>  NormalMove::NonTamMove{
+                data: NonTamMoveDotData::SrcStepDstFinite {
+                    src, step, dest, water_entry_ciurl: None
+                },
+            } ,
+            FstNormalMove::NonTamMoveFromHopZuo { color, prof, dest } =>  NormalMove::NonTamMove{
+                data: NonTamMoveDotData::FromHand {
+                    color: color.into(),
+                    profession: prof.into(),
+                    dest
+                },
+            } ,
+            FstNormalMove::TamMoveNoStep { src, first_dest, second_dest } => NormalMove::TamMove {
+                flatten: TamMoveInternal::NoStep {
+                    src, first_dest, second_dest,
+                }
+            },
+            FstNormalMove::TamMoveStepsDuringFormer { src, step, first_dest, second_dest } => NormalMove::TamMove {
+                flatten: TamMoveInternal::StepsDuringFormer {
+                    src, step, first_dest, second_dest
+                }
+            },
+            FstNormalMove::TamMoveStepsDuringLatter { src, step, first_dest, second_dest } => NormalMove::TamMove {
+                flatten: TamMoveInternal::StepsDuringLatter {
+                    src, step, first_dest, second_dest
+                }
+            },
+        }
+    }
+}
+
+impl From<NormalMove> for cetkaik_full_state_transition::message::NormalMove {
+    fn from(normal_move : NormalMove) -> Self {
+        use cetkaik_full_state_transition::message::NormalMove as FstNormalMove;
+
+        match normal_move {
+            NormalMove::NonTamMove { data } => {
+                match data {
+                    NonTamMoveDotData::FromHand { color, profession, dest } => FstNormalMove::NonTamMoveFromHopZuo {
+                        color: color.into(),
+                        prof: profession.into(),
+                        dest,
+                    },
+                    NonTamMoveDotData::SrcDst { src, dest, water_entry_ciurl } => FstNormalMove::NonTamMoveSrcDst {
+                        src,
+                        dest,
+                    },
+                    NonTamMoveDotData::SrcStepDstFinite { src, step, dest, water_entry_ciurl } => FstNormalMove::NonTamMoveSrcStepDstFinite {
+                        src,
+                        step,
+                        dest,
+                    },
+                }
+            },
+            NormalMove::TamMove { flatten } => {
+                match flatten {
+                    TamMoveInternal::NoStep { src, first_dest, second_dest } => FstNormalMove::TamMoveNoStep {
+                        src,
+                        first_dest,
+                        second_dest,
+                    },
+                    TamMoveInternal::StepsDuringFormer { src, step, first_dest, second_dest } => FstNormalMove::TamMoveStepsDuringFormer {
+                        src,
+                        step,
+                        first_dest,
+                        second_dest,
+                    },
+                    TamMoveInternal::StepsDuringLatter { src, step, first_dest, second_dest } => FstNormalMove::TamMoveStepsDuringLatter {
+                        src,
+                        step,
+                        first_dest,
+                        second_dest,
+                    },
+                }
+
+            },
+        }
+    }
+}
+
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Copy, Clone)]
 #[serde(tag = "type")]
