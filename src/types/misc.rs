@@ -2,7 +2,6 @@ use serde::{Deserialize, Serialize};
 
 use uuid::Uuid;
 
-use super::{WhoGoesFirst};
 
 
 /// A type that serialize into `{}`.

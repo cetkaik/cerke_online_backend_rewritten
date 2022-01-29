@@ -1,24 +1,23 @@
-
-use cetkaik_full_state_transition::{Rate, Season, Config, state};
-use cetkaik_core::absolute::Field;
-use rand::{Rng, prelude::ThreadRng};
+use cetkaik_full_state_transition::{state, Season};
+use rand::{prelude::ThreadRng, Rng};
 use serde::{Deserialize, Serialize};
-use serde_repr::{Serialize_repr,Deserialize_repr};
+use serde_repr::{Deserialize_repr, Serialize_repr};
 
-use super::MoveToBePolled;
 use super::serde_coord;
+use super::MoveToBePolled;
 
 pub type AbsoluteCoord = cetkaik_core::absolute::Coord;
 
 #[derive(Debug)]
-pub enum Phase { 
+pub enum Phase {
     Start(state::A),
     BeforeCiurl(state::CWithoutCiurl),
     AfterCiurl(state::C),
     Moved(state::HandNotResolved),
 }
 
-impl Phase { 
+impl Phase {
+    #[must_use]
     pub fn phase_name(&self) -> &str {
         match self {
             Phase::Start(_) => "Start",
@@ -28,21 +27,23 @@ impl Phase {
         }
     }
 
-    pub fn whose_turn (&self) -> cetkaik_core::absolute::Side {
+    #[must_use]
+    pub fn whose_turn(&self) -> cetkaik_core::absolute::Side {
         match self {
             Phase::Start(x) => x.whose_turn,
             Phase::BeforeCiurl(x) => x.whose_turn,
             Phase::AfterCiurl(x) => x.c.whose_turn,
-            Phase::Moved(x ) => x.whose_turn,
+            Phase::Moved(x) => x.whose_turn,
         }
     }
 
+    #[must_use]
     pub fn get_season(&self) -> Season {
         match self {
             Phase::Start(x) => x.season,
             Phase::BeforeCiurl(x) => x.season,
             Phase::AfterCiurl(x) => x.c.season,
-            Phase::Moved(x ) => x.season,
+            Phase::Moved(x) => x.season,
         }
     }
 }
@@ -144,9 +145,12 @@ impl From<cetkaik_core::Profession> for Profession {
 pub struct Ciurl(bool, bool, bool, bool, bool);
 
 impl Ciurl {
+    #[must_use]
     pub fn new(rng: &mut ThreadRng) -> Ciurl {
         Ciurl(rng.gen(), rng.gen(), rng.gen(), rng.gen(), rng.gen())
     }
+
+    #[must_use]
     pub fn count(self) -> usize {
         self.0 as usize + self.1 as usize + self.2 as usize + self.3 as usize + self.4 as usize
     }
@@ -155,14 +159,14 @@ impl Ciurl {
 impl From<usize> for Ciurl {
     fn from(cnt: usize) -> Self {
         use rand::seq::SliceRandom;
-        
+
         let mut s = [false; 5];
-        for i in 0..cnt {
-            s[i] = true;
+        for item in s.iter_mut().take(cnt) {
+            *item = true;
         }
         let mut rng = rand::thread_rng();
         s.shuffle(&mut rng);
-        Self(s[0],s[1],s[2],s[3],s[4])
+        Self(s[0], s[1], s[2], s[3], s[4])
     }
 }
 
@@ -179,95 +183,138 @@ pub enum NormalMove {
 }
 
 impl From<cetkaik_full_state_transition::message::NormalMove> for NormalMove {
-    fn from(normal_move : cetkaik_full_state_transition::message::NormalMove) -> Self {
+    fn from(normal_move: cetkaik_full_state_transition::message::NormalMove) -> Self {
         use cetkaik_full_state_transition::message::NormalMove as FstNormalMove;
 
         match normal_move {
-            FstNormalMove::NonTamMoveSrcDst { src, dest } => NormalMove::NonTamMove{
+            FstNormalMove::NonTamMoveSrcDst { src, dest } => NormalMove::NonTamMove {
                 data: NonTamMoveDotData::SrcDst {
-                    src, dest, water_entry_ciurl: None
+                    src,
+                    dest,
+                    water_entry_ciurl: None,
                 },
-            } ,
-            FstNormalMove::NonTamMoveSrcStepDstFinite { src, step, dest } =>  NormalMove::NonTamMove{
-                data: NonTamMoveDotData::SrcStepDstFinite {
-                    src, step, dest, water_entry_ciurl: None
-                },
-            } ,
-            FstNormalMove::NonTamMoveFromHopZuo { color, prof, dest } =>  NormalMove::NonTamMove{
+            },
+            FstNormalMove::NonTamMoveSrcStepDstFinite { src, step, dest } => {
+                NormalMove::NonTamMove {
+                    data: NonTamMoveDotData::SrcStepDstFinite {
+                        src,
+                        step,
+                        dest,
+                        water_entry_ciurl: None,
+                    },
+                }
+            }
+            FstNormalMove::NonTamMoveFromHopZuo { color, prof, dest } => NormalMove::NonTamMove {
                 data: NonTamMoveDotData::FromHand {
                     color: color.into(),
                     profession: prof.into(),
-                    dest
+                    dest,
                 },
-            } ,
-            FstNormalMove::TamMoveNoStep { src, first_dest, second_dest } => NormalMove::TamMove {
+            },
+            FstNormalMove::TamMoveNoStep {
+                src,
+                first_dest,
+                second_dest,
+            } => NormalMove::TamMove {
                 flatten: TamMoveInternal::NoStep {
-                    src, first_dest, second_dest,
-                }
+                    src,
+                    first_dest,
+                    second_dest,
+                },
             },
-            FstNormalMove::TamMoveStepsDuringFormer { src, step, first_dest, second_dest } => NormalMove::TamMove {
+            FstNormalMove::TamMoveStepsDuringFormer {
+                src,
+                step,
+                first_dest,
+                second_dest,
+            } => NormalMove::TamMove {
                 flatten: TamMoveInternal::StepsDuringFormer {
-                    src, step, first_dest, second_dest
-                }
+                    src,
+                    step,
+                    first_dest,
+                    second_dest,
+                },
             },
-            FstNormalMove::TamMoveStepsDuringLatter { src, step, first_dest, second_dest } => NormalMove::TamMove {
+            FstNormalMove::TamMoveStepsDuringLatter {
+                src,
+                step,
+                first_dest,
+                second_dest,
+            } => NormalMove::TamMove {
                 flatten: TamMoveInternal::StepsDuringLatter {
-                    src, step, first_dest, second_dest
-                }
+                    src,
+                    step,
+                    first_dest,
+                    second_dest,
+                },
             },
         }
     }
 }
 
 impl From<NormalMove> for cetkaik_full_state_transition::message::NormalMove {
-    fn from(normal_move : NormalMove) -> Self {
+    fn from(normal_move: NormalMove) -> Self {
         use cetkaik_full_state_transition::message::NormalMove as FstNormalMove;
 
         match normal_move {
-            NormalMove::NonTamMove { data } => {
-                match data {
-                    NonTamMoveDotData::FromHand { color, profession, dest } => FstNormalMove::NonTamMoveFromHopZuo {
-                        color: color.into(),
-                        prof: profession.into(),
-                        dest,
-                    },
-                    NonTamMoveDotData::SrcDst { src, dest, water_entry_ciurl } => FstNormalMove::NonTamMoveSrcDst {
-                        src,
-                        dest,
-                    },
-                    NonTamMoveDotData::SrcStepDstFinite { src, step, dest, water_entry_ciurl } => FstNormalMove::NonTamMoveSrcStepDstFinite {
-                        src,
-                        step,
-                        dest,
-                    },
-                }
+            NormalMove::NonTamMove { data } => match data {
+                NonTamMoveDotData::FromHand {
+                    color,
+                    profession,
+                    dest,
+                } => FstNormalMove::NonTamMoveFromHopZuo {
+                    color: color.into(),
+                    prof: profession.into(),
+                    dest,
+                },
+                NonTamMoveDotData::SrcDst {
+                    src,
+                    dest,
+                    water_entry_ciurl: _,
+                } => FstNormalMove::NonTamMoveSrcDst { src, dest },
+                NonTamMoveDotData::SrcStepDstFinite {
+                    src,
+                    step,
+                    dest,
+                    water_entry_ciurl: _,
+                } => FstNormalMove::NonTamMoveSrcStepDstFinite { src, step, dest },
             },
-            NormalMove::TamMove { flatten } => {
-                match flatten {
-                    TamMoveInternal::NoStep { src, first_dest, second_dest } => FstNormalMove::TamMoveNoStep {
-                        src,
-                        first_dest,
-                        second_dest,
-                    },
-                    TamMoveInternal::StepsDuringFormer { src, step, first_dest, second_dest } => FstNormalMove::TamMoveStepsDuringFormer {
-                        src,
-                        step,
-                        first_dest,
-                        second_dest,
-                    },
-                    TamMoveInternal::StepsDuringLatter { src, step, first_dest, second_dest } => FstNormalMove::TamMoveStepsDuringLatter {
-                        src,
-                        step,
-                        first_dest,
-                        second_dest,
-                    },
-                }
-
+            NormalMove::TamMove { flatten } => match flatten {
+                TamMoveInternal::NoStep {
+                    src,
+                    first_dest,
+                    second_dest,
+                } => FstNormalMove::TamMoveNoStep {
+                    src,
+                    first_dest,
+                    second_dest,
+                },
+                TamMoveInternal::StepsDuringFormer {
+                    src,
+                    step,
+                    first_dest,
+                    second_dest,
+                } => FstNormalMove::TamMoveStepsDuringFormer {
+                    src,
+                    step,
+                    first_dest,
+                    second_dest,
+                },
+                TamMoveInternal::StepsDuringLatter {
+                    src,
+                    step,
+                    first_dest,
+                    second_dest,
+                } => FstNormalMove::TamMoveStepsDuringLatter {
+                    src,
+                    step,
+                    first_dest,
+                    second_dest,
+                },
             },
         }
     }
 }
-
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Copy, Clone)]
 #[serde(tag = "type")]
@@ -276,23 +323,23 @@ pub enum NonTamMoveDotData {
     FromHand {
         color: Color,
         profession: Profession,
-        #[serde(with="serde_coord")]
+        #[serde(with = "serde_coord")]
         dest: AbsoluteCoord,
     },
     SrcDst {
-        #[serde(with="serde_coord")]
+        #[serde(with = "serde_coord")]
         src: AbsoluteCoord,
-        #[serde(with="serde_coord")]
+        #[serde(with = "serde_coord")]
         dest: AbsoluteCoord,
         #[serde(skip_serializing_if = "Option::is_none")]
         water_entry_ciurl: Option<Ciurl>,
     },
     SrcStepDstFinite {
-        #[serde(with="serde_coord")]
+        #[serde(with = "serde_coord")]
         src: AbsoluteCoord,
-        #[serde(with="serde_coord")]
+        #[serde(with = "serde_coord")]
         step: AbsoluteCoord,
-        #[serde(with="serde_coord")]
+        #[serde(with = "serde_coord")]
         dest: AbsoluteCoord,
         #[serde(skip_serializing_if = "Option::is_none")]
         water_entry_ciurl: Option<Ciurl>,
@@ -303,44 +350,44 @@ pub enum NonTamMoveDotData {
 #[serde(tag = "stepStyle")]
 pub enum TamMoveInternal {
     NoStep {
-        #[serde(with="serde_coord")]
+        #[serde(with = "serde_coord")]
         src: AbsoluteCoord,
 
-        #[serde(with="serde_coord")]
+        #[serde(with = "serde_coord")]
         #[serde(rename = "firstDest")]
         first_dest: AbsoluteCoord,
 
-        #[serde(with="serde_coord")]
+        #[serde(with = "serde_coord")]
         #[serde(rename = "secondDest")]
         second_dest: AbsoluteCoord,
     },
 
     StepsDuringFormer {
-        #[serde(with="serde_coord")]
+        #[serde(with = "serde_coord")]
         src: AbsoluteCoord,
-        #[serde(with="serde_coord")]
+        #[serde(with = "serde_coord")]
         step: AbsoluteCoord,
 
-        #[serde(with="serde_coord")]
+        #[serde(with = "serde_coord")]
         #[serde(rename = "firstDest")]
         first_dest: AbsoluteCoord,
 
-        #[serde(with="serde_coord")]
+        #[serde(with = "serde_coord")]
         #[serde(rename = "secondDest")]
         second_dest: AbsoluteCoord,
     },
 
     StepsDuringLatter {
-        #[serde(with="serde_coord")]
+        #[serde(with = "serde_coord")]
         src: AbsoluteCoord,
-        #[serde(with="serde_coord")]
+        #[serde(with = "serde_coord")]
         step: AbsoluteCoord,
 
-        #[serde(with="serde_coord")]
+        #[serde(with = "serde_coord")]
         #[serde(rename = "firstDest")]
         first_dest: AbsoluteCoord,
 
-        #[serde(with="serde_coord")]
+        #[serde(with = "serde_coord")]
         #[serde(rename = "secondDest")]
         second_dest: AbsoluteCoord,
     },

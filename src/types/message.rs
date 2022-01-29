@@ -1,7 +1,4 @@
 use std::fmt::Debug;
-
-use cetkaik_core::absolute::Coord;
-use cetkaik_full_state_transition::message::NormalMove;
 use rand::prelude::ThreadRng;
 use serde::{Deserialize, Serialize};
 use super::{AbsoluteCoord, Ciurl, NonTamMoveDotData, TamMoveInternal, bot::TacticsKey};
@@ -25,6 +22,7 @@ pub enum MainMessage {
 }
 
 impl MainMessage {
+    #[must_use]
     pub fn process(self) -> MoveToBePolled {
         match self {
             MainMessage::InfAfterStep { flatten } => {
@@ -166,6 +164,7 @@ pub struct WhoGoesFirst {
 }
 
 impl WhoGoesFirst {
+    #[must_use]
     pub fn new(rng: &mut ThreadRng) -> Self {
         let mut process: Vec<[Ciurl; 2]> = Vec::new();
         loop {
@@ -187,6 +186,7 @@ impl WhoGoesFirst {
         }
     }
 
+    #[must_use]
     pub fn not(&self) -> Self {
         WhoGoesFirst {
             process: self.process.iter().map(|[a, b]| [*b, *a]).collect(),

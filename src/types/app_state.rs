@@ -6,7 +6,7 @@ use std::{sync::Mutex};
 use cetkaik_full_state_transition::message::{AfterHalfAcceptance, InfAfterStep};
 use cetkaik_full_state_transition::state::HandResolved;
 
-use crate::types::{AfterHalfAcceptanceMessage, Ciurl, InfAfterStepInternal, MainMessage, NonTamMoveDotData, RetAfterHalfAcceptance, RetInfPoll, RetMainPoll, RetNormalMove, RetTaXot, RetTyMok, RetWhetherTyMokPoll, TamMoveInternal};
+use crate::types::{AfterHalfAcceptanceMessage, InfAfterStepInternal, MainMessage, NonTamMoveDotData, RetAfterHalfAcceptance, RetInfPoll, RetMainPoll, RetNormalMove, RetTaXot, RetTyMok, RetWhetherTyMokPoll, TamMoveInternal};
 
 use super::{AccessToken, GameState, Phase, RetInfAfterStep, RoomId, RoomInfoWithPerspective, WhoGoesFirst};
 
@@ -39,6 +39,8 @@ impl AppState {
         game_state.apply_resolve();
         res
     }
+
+    #[allow(clippy::too_many_lines)]
     pub fn analyze_main_message_and_update(
         &self,
         message: MainMessage,
@@ -195,8 +197,8 @@ impl AppState {
         }
         
         if let Phase::Moved(state) = &game_state.state {
-            let state_resolved = cetkaik_full_state_transition::resolve(&state, game_state.config);
-            if let HandResolved::HandExists { if_taxot, if_tymok } = state_resolved {
+            let state_resolved = cetkaik_full_state_transition::resolve(state, game_state.config);
+            if let HandResolved::HandExists { if_taxot: _, if_tymok } = state_resolved {
                 game_state.state = Phase::Start(if_tymok);
                 RetTyMok::Ok
             } else { 
@@ -219,8 +221,8 @@ impl AppState {
         }
 
         if let Phase::Moved(state) = &game_state.state {
-            let state_resolved = cetkaik_full_state_transition::resolve(&state, game_state.config);
-            if let HandResolved::HandExists { if_taxot, if_tymok }  = state_resolved {
+            let state_resolved = cetkaik_full_state_transition::resolve(state, game_state.config);
+            if let HandResolved::HandExists { if_taxot, if_tymok: _ }  = state_resolved {
                 game_state.state = match if_taxot {
                     cetkaik_full_state_transition::IfTaxot::NextSeason(p_state) => {
                         Phase::Start(p_state.choose().0)
@@ -266,8 +268,7 @@ impl AppState {
                     )
                 },
                 Some(crate::types::HandCompletionStatus::TyMok) => RetWhetherTyMokPoll::TyMok,
-                Some(crate::types::HandCompletionStatus::NotYetDetermined) => RetWhetherTyMokPoll::NotYetDetermined,
-                None => RetWhetherTyMokPoll::NotYetDetermined,
+                Some(crate::types::HandCompletionStatus::NotYetDetermined) | None => RetWhetherTyMokPoll::NotYetDetermined,
             }
         } else {
             RetWhetherTyMokPoll::NotYetDetermined

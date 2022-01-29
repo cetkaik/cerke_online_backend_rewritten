@@ -1,18 +1,27 @@
 #![warn(clippy::pedantic)]
-#![allow(clippy::unused_async)]
+#![allow(
+    clippy::unused_async,
+    clippy::missing_panics_doc,
+    clippy::missing_errors_doc,
+    clippy::module_name_repetitions
+)]
 
-pub mod types;
-pub mod matching;
 pub mod bot;
+pub mod matching;
+pub mod types;
 
+use crate::types::{
+    AccessToken, AfterHalfAcceptanceMessageStruct, AppState, MainMessage, MainMessageStruct,
+    MsgWithAccessToken, RetAfterHalfAcceptance, RetInfPoll, RetMainPoll, RetNormalMove, RetTaXot,
+    RetTyMok, RetWhetherTyMokPoll, RoomInfoWithPerspective,
+};
 use actix_cors::Cors;
 use actix_web::http::header;
 use actix_web::{post, web, App, HttpResponse, HttpServer, Responder};
 use actix_web_httpauth::extractors::bearer::BearerAuth;
-use types::RetInfAfterStep;
 use std::collections::{HashMap, HashSet};
 use std::{env, sync::Mutex};
-use crate::types::{AccessToken, AfterHalfAcceptanceMessageStruct, AppState, MainMessage, MainMessageStruct, MsgWithAccessToken, RetAfterHalfAcceptance, RetInfPoll, RetMainPoll, RetNormalMove, RetTaXot, RetTyMok, RetWhetherTyMokPoll, RoomInfoWithPerspective};
+use types::RetInfAfterStep;
 
 async fn index(data: web::Data<AppState>) -> String {
     let mut counter = data.access_counter.lock().unwrap();
@@ -45,16 +54,14 @@ async fn main() -> std::io::Result<()> {
             ]);
 
         let origin = env::var("ORIGIN");
-        let cors = if let Ok(origin) = origin { 
+        let cors = if let Ok(origin) = origin {
             cors.allowed_origin(&origin)
-        } else { 
+        } else {
             cors.allow_any_origin().send_wildcard()
         };
 
         App::new()
-            .wrap(
-                cors,
-            )
+            .wrap(cors)
             .app_data(app_state.clone())
             .route("/", web::get().to(index))
             .service(mainpoll)
@@ -158,7 +165,6 @@ async fn slow2(
     HttpResponse::Ok().json(slow2_(auth.token(), &data, &message))
 }
 
-
 fn parse_token_and_get_room_info(
     raw_token: &str,
     data: &web::Data<AppState>,
@@ -196,7 +202,9 @@ fn slow2_(
 ) -> RetAfterHalfAcceptance {
     match parse_token_and_get_room_info(raw_token, data) {
         Err(why_illegal) => RetAfterHalfAcceptance::Err { why_illegal },
-        Ok(room_info) => data.analyze_afterhalfacceptance_message_and_update(message.message, &room_info),
+        Ok(room_info) => {
+            data.analyze_afterhalfacceptance_message_and_update(message.message, &room_info)
+        }
     }
 }
 
