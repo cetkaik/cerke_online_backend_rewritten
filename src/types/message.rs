@@ -71,7 +71,7 @@ fn test_ser_normalmove_nontam(){
             water_entry_ciurl: None 
         },
     }.into();
-    let json_str = r#"{"message":{"type":"NonTamMove","data":{"type":"SrcDst","src":["AI","C"],"dest":["O","C"]}}}"#;
+    let json_str = r#"{"message":{"type":"NonTamMove","data":{"type":"SrcDst","src":["AI","C"],"dest":["Y","C"]}}}"#;
     assert_eq!(json_str, serde_json::to_string(&mms).unwrap() );
 
 }
