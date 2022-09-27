@@ -8,11 +8,16 @@ use uuid::Uuid;
 #[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Debug)]
 pub struct Unit {}
 
-#[test]
-fn unit_serde() {
-    assert_eq!("{}", serde_json::to_string(&Unit {}).unwrap());
-    let g: Unit = serde_json::from_str("{}").unwrap();
-    assert_eq!(Unit {}, g);
+#[cfg(test)]
+mod tests {
+    use crate::types::Unit;
+
+    #[test]
+    fn unit_serde() {
+        assert_eq!("{}", serde_json::to_string(&Unit {}).unwrap());
+        let g: Unit = serde_json::from_str("{}").unwrap();
+        assert_eq!(Unit {}, g);
+    }
 }
 
 
