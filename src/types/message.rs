@@ -61,68 +61,62 @@ impl From<MainMessage> for MainMessageStruct {
     }
 }
 
-#[test]
-fn test_ser_normalmove_nontam(){
-    use cetkaik_core::absolute::{Row,Column};
-    let mms :MainMessageStruct = MainMessage::NonTamMove { 
-        data : NonTamMoveDotData::SrcDst { 
-            src: cetkaik_core::absolute::Coord(Row::AI,Column::C),
-            dest: cetkaik_core::absolute::Coord(Row::Y,Column::C),
-            water_entry_ciurl: None 
-        },
-    }.into();
-    let json_str = r#"{"message":{"type":"NonTamMove","data":{"type":"SrcDst","src":["AI","C"],"dest":["Y","C"]}}}"#;
-    assert_eq!(json_str, serde_json::to_string(&mms).unwrap() );
+#[cfg(test)]
+mod tests {
+    use crate::{AfterHalfAcceptanceMessageStruct, MainMessage, MainMessageStruct};
+    use crate::types::{AfterHalfAcceptanceMessage, NonTamMoveDotData};
 
-}
+    #[test]
+    fn test_ser_normalmove_nontam(){
+        use cetkaik_core::absolute::{Row,Column};
+        let mms :MainMessageStruct = MainMessage::NonTamMove {
+            data : NonTamMoveDotData::SrcDst {
+                src: cetkaik_core::absolute::Coord(Row::AI,Column::C),
+                dest: cetkaik_core::absolute::Coord(Row::Y,Column::C),
+                water_entry_ciurl: None
+            },
+        }.into();
+        let json_str = r#"{"message":{"type":"NonTamMove","data":{"type":"SrcDst","src":["AI","C"],"dest":["Y","C"]}}}"#;
+        assert_eq!(json_str, serde_json::to_string(&mms).unwrap() );
 
-#[test]
-fn test_normalmove_nontam(){
-    use cetkaik_core::absolute::{Row,Column};
-    let json_str = r#"{"message":{"type":"NonTamMove","data":{"type":"SrcDst","src":["AI","C"],"dest":["O","C"]}}}"#;
-    let result: MainMessageStruct = serde_json::from_str(json_str).unwrap();
-    let MainMessageStruct{ message: result } = result;
-    
-    assert_eq!(result, MainMessage::NonTamMove { 
-        data : NonTamMoveDotData::SrcDst { 
-            src: cetkaik_core::absolute::Coord(Row::AI,Column::C),
-            dest: cetkaik_core::absolute::Coord(Row::O,Column::C),
-            water_entry_ciurl: None 
-        },
-    });
+    }
 
-}
+    #[test]
+    fn test_normalmove_nontam(){
+        use cetkaik_core::absolute::{Row,Column};
+        let json_str = r#"{"message":{"type":"NonTamMove","data":{"type":"SrcDst","src":["AI","C"],"dest":["O","C"]}}}"#;
+        let result: MainMessageStruct = serde_json::from_str(json_str).unwrap();
+        let MainMessageStruct{ message: result } = result;
 
+        assert_eq!(result, MainMessage::NonTamMove {
+            data : NonTamMoveDotData::SrcDst {
+                src: cetkaik_core::absolute::Coord(Row::AI,Column::C),
+                dest: cetkaik_core::absolute::Coord(Row::O,Column::C),
+                water_entry_ciurl: None
+            },
+        });
 
-#[derive(Serialize, Deserialize, Debug, Copy, Clone, Eq, PartialEq)]
-#[serde(tag = "type")]
-pub enum AfterHalfAcceptanceMessage {
-    AfterHalfAcceptance {
-        #[serde(with="serde_coord::opt")]
-        dest: Option<AbsoluteCoord>
-    },
-}
+    }
 
-
-#[test]
-fn test_after_half_null(){
-    use cetkaik_core::absolute::{Row,Column};
-    {
-        let json_str = r#"{
+    #[test]
+    fn test_after_half_null(){
+        use cetkaik_core::absolute::{Row,Column};
+        {
+            let json_str = r#"{
             "message": {
                 "type": "AfterHalfAcceptance",
                 "dest": null
             }
         }"#;
-        let result: AfterHalfAcceptanceMessageStruct = serde_json::from_str(json_str).unwrap();
-        let AfterHalfAcceptanceMessageStruct{ message: result } = result;
-        
-        assert_eq!(result, AfterHalfAcceptanceMessage::AfterHalfAcceptance {  
-            dest: None
-        });
-    }
-    {            
-        let json_str = r#"{
+            let result: AfterHalfAcceptanceMessageStruct = serde_json::from_str(json_str).unwrap();
+            let AfterHalfAcceptanceMessageStruct{ message: result } = result;
+
+            assert_eq!(result, AfterHalfAcceptanceMessage::AfterHalfAcceptance {
+                dest: None
+            });
+        }
+        {
+            let json_str = r#"{
             "message": {
                 "type": "AfterHalfAcceptance",
                 "dest": [
@@ -131,13 +125,23 @@ fn test_after_half_null(){
                 ]
             }
         }"#;
-        let result: AfterHalfAcceptanceMessageStruct = serde_json::from_str(json_str).unwrap();
-        let AfterHalfAcceptanceMessageStruct{ message: result } = result;
-        
-        assert_eq!(result, AfterHalfAcceptanceMessage::AfterHalfAcceptance {  
-            dest: Some(cetkaik_core::absolute::Coord(Row::O,Column::L)),
-        });
+            let result: AfterHalfAcceptanceMessageStruct = serde_json::from_str(json_str).unwrap();
+            let AfterHalfAcceptanceMessageStruct{ message: result } = result;
+
+            assert_eq!(result, AfterHalfAcceptanceMessage::AfterHalfAcceptance {
+                dest: Some(cetkaik_core::absolute::Coord(Row::O,Column::L)),
+            });
+        }
     }
+}
+
+#[derive(Serialize, Deserialize, Debug, Copy, Clone, Eq, PartialEq)]
+#[serde(tag = "type")]
+pub enum AfterHalfAcceptanceMessage {
+    AfterHalfAcceptance {
+        #[serde(with="serde_coord::opt")]
+        dest: Option<AbsoluteCoord>
+    },
 }
 
 #[derive(Serialize, Deserialize, Debug, Copy, Clone, Eq, PartialEq)]
