@@ -374,9 +374,9 @@ dependencies = [
 
 [[package]]
 name = "cetkaik_full_state_transition"
-version = "0.2.11"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "290fb451b5a328162638ccfa423c49d56d4820d780212ee6d8d6082e4f1a692c"
+checksum = "e92f00658f252edcc51726af2c4a3dd09a89178f8e1703a33c96cdfcf28a506a"
 dependencies = [
  "cetkaik_calculate_hand",
  "cetkaik_core",
