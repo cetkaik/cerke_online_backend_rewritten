@@ -10,9 +10,9 @@ pub type AbsoluteCoord = cetkaik_core::absolute::Coord;
 
 #[derive(Debug)]
 pub enum Phase {
-    Start(state::A),
-    BeforeCiurl(state::CWithoutCiurl),
-    AfterCiurl(state::C),
+    Start(state::GroundState),
+    BeforeCiurl(state::ExcitedStateWithoutCiurl),
+    AfterCiurl(state::ExcitedState),
     Moved(state::HandNotResolved),
 }
 

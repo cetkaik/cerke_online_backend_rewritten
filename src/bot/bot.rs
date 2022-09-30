@@ -83,7 +83,7 @@ pub struct BotMoveWithTactics {
     pub bot_move: BotMove
 }
 
-pub fn bot_random(game_state: &state::A, config: Config) -> BotMoveWithTactics {
+pub fn bot_random(game_state: &state::GroundState, config: Config) -> BotMoveWithTactics {
     let mut rng = rand::thread_rng();
     let (hop1zuo1_candidates,candidates) = game_state.get_candidates(config);
     
@@ -95,6 +95,6 @@ pub fn bot_random(game_state: &state::A, config: Config) -> BotMoveWithTactics {
 }
 
 
-pub fn bot_move(game_state: &state::A, config: Config) -> BotMoveWithTactics { 
+pub fn bot_move(game_state: &state::GroundState, config: Config) -> BotMoveWithTactics {
     bot_random(game_state, config)
 }
